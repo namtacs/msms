@@ -36,7 +36,12 @@ class ServerCreateHelper(tk.Tk):
 		os.mkdir(serverDir)
 		if type == "Forge":
 			cmd = ["java", "-jar", os.path.join("serverfiles", "forge" + version + ".jar"), "--installServer", serverDir]
-			log.info("The installer log will be written to the installer.log file")
+			log.info("The installation log will be written to the installer.log file")
+			log.info(cmd)
+			execute(cmd)
+		elif type == "Spigot":
+			cmd = ["java", "-jar", os.path.join("serverfiles", "spigot.jar"), "-o", serverDir, "--rev", version]
+			log.info("The installation log will be written to the BuildTools.log.txt file")
 			log.info(cmd)
 			execute(cmd)
 		with open(os.path.join(serverDir, "eula.txt"), "w") as f:
@@ -141,19 +146,29 @@ class App(tk.Tk):
 		for item in self.servers_list.get_children():
 			self.servers_list.delete(item)
 		running_sh = []
+		running_java = []
 		for pid in psutil.pids():
 			try:
 				p = psutil.Process(pid)
-				if p.name() == "sh":
+				name = p.name()
+				if name == "sh":
 					running_sh.append(p.cmdline()[1])
+				elif name == "java":
+					running_java.append(p.cmdline()[2])
 			except: pass
 		for server in cfg["servers"]:
-			run_sh = os.path.join(os.getcwd(), "servers", server, "run.sh")
-			if run_sh in running_sh:
+			data = cfg["servers"][server]
+			if data["type"] == "forge":
+				runfile = "run.sh"
+				running = running_sh
+			elif data["type"] == "spigot":
+				runfile = "spigot-" + data["version"] + ".jar"
+				running = running_java
+			if os.path.join(os.getcwd(), "servers", server, runfile) in running:
 				state = "Running"
 			else:
 				state = "Stopped"
-			self.servers_list.insert("", "end", values=(server, cfg["servers"][server]["type"], state), tags = (state.lower(),))
+			self.servers_list.insert("", "end", values=(server, data["type"], state), tags = (state.lower(),))
 		self.btn_del.configure(state = tk.DISABLED)
 		self.btn_start.configure(state = tk.DISABLED)
 		self.btn_stop.configure(state = tk.DISABLED)
@@ -186,6 +201,7 @@ class App(tk.Tk):
 			serverDir = os.path.join("servers", name)
 			cwd = os.path.join(os.getcwd(), serverDir)
 			if type == "forge": subprocess.Popen(['"' + os.path.join(cwd, "run.sh") + '"'], cwd = cwd, shell = True, stdout = subprocess.DEVNULL)
+			elif type == "spigot": subprocess.Popen(["java", "-jar", os.path.join(cwd, "spigot-" + cfg["servers"][name]["version"] + ".jar")], cwd = cwd, stdout = subprocess.DEVNULL)
 			log.info("Server '" + name + "' started")
 		self.refresh_servers_list()
 	def stop_server(self):
@@ -206,8 +222,8 @@ class App(tk.Tk):
 	def refresh_servers_list_idle_task(self):
 		self.refresh_servers_list()
 		self.after(10000, self.refresh_servers_list_idle_task)
-def execute(cmd, shell = False):
-	popen = subprocess.Popen(cmd, shell=shell)
+def execute(cmd, shell = False, cwd = None):
+	popen = subprocess.Popen(cmd, shell = shell, cwd = cwd)
 	return_code = popen.wait()
 	if return_code:
 		log.error("Command " + ' '.join(cmd) + " returned error code " + str(return_code))
@@ -224,7 +240,7 @@ else:
 	json.dump(DEFAULT_CONFIG, open(CONFIG_NAME, "w"))
 	cfg = DEFAULT_CONFIG
 if not os.path.isdir("servers"):
-	log.info("'servers'" + " not found, creating")
+	log.debug("'servers'" + " not found, creating")
 	os.mkdir("servers")
 if __name__ == '__main__':
 	window = App()
