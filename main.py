@@ -9,6 +9,8 @@ import subprocess
 import shutil
 import psutil
 import time
+import requests
+import threading
 
 VERSION = 1
 NAME = "MSMS"
@@ -38,14 +40,22 @@ class ServerCreateHelper(tk.Tk):
 			cmd = ["java", "-jar", os.path.join("serverfiles", "forge" + version + ".jar"), "--installServer", serverDir]
 			log.info("The installation log will be written to the installer.log file")
 			log.info(cmd)
-			execute(cmd)
+			thread = threading.Thread(target = execute, args = (cmd,))
+			thread.start()
 		elif type == "Spigot":
 			cmd = ["java", "-jar", os.path.join("serverfiles", "spigot.jar"), "-o", serverDir, "--rev", version]
 			log.info("The installation log will be written to the BuildTools.log.txt file")
 			log.info(cmd)
-			execute(cmd)
+			thread = threading.Thread(target = execute, args = (cmd,))
+			thread.start()
 		elif type == "Paper":
-			shutil.copy(os.path.join("serverfiles", "paper-" + version + ".jar"), serverDir)
+			jarfile = os.path.join("serverfiles", "paper-" + version + ".jar")
+			latest_build = str(json.loads(requests.get("https://papermc.io/api/v2/projects/paper/versions/" + version).text)["builds"][-1])
+			log.info("Latest build is " + latest_build)
+			log.info("Downloading")
+			with open(jarfile, "wb") as f:
+				f.write(requests.get("https://papermc.io/api/v2/projects/paper/versions/" + version + "/builds/" + latest_build + "/downloads/paper-" + version + "-" + latest_build + ".jar").content)
+			shutil.copy(jarfile, serverDir)
 		with open(os.path.join(serverDir, "eula.txt"), "w") as f: f.write("eula=true")
 		cfg["servers"][name] = {"type" : type.lower(), "version" : version, "dir" : serverDir}
 		config_update()
