@@ -20,7 +20,7 @@ class ServerCreateHelper(tk.Tk):
 		self.title("Create server")
 		nameEntry = tk.Entry(self)
 		nameEntry.grid(column=0, row=0)
-		typeComboBox = ttk.Combobox(self, values = ("BungeeCord", "Forge", "Spigot", "Official"))
+		typeComboBox = ttk.Combobox(self, values = ("BungeeCord", "Forge", "Spigot", "Paper", "Official"))
 		typeComboBox.current(2)
 		typeComboBox.grid(column=1, row=0)
 		lbl = tk.Label(self, text = "Version:", padx = 5)
@@ -44,9 +44,9 @@ class ServerCreateHelper(tk.Tk):
 			log.info("The installation log will be written to the BuildTools.log.txt file")
 			log.info(cmd)
 			execute(cmd)
-		with open(os.path.join(serverDir, "eula.txt"), "w") as f:
-			f.write("eula=true")
-		log.debug("eula = true")
+		elif type == "Paper":
+			shutil.copy(os.path.join("serverfiles", "paper-" + version + ".jar"), serverDir)
+		with open(os.path.join(serverDir, "eula.txt"), "w") as f: f.write("eula=true")
 		cfg["servers"][name] = {"type" : type.lower(), "version" : version, "dir" : serverDir}
 		config_update()
 		window.refresh_servers_list()
@@ -164,6 +164,9 @@ class App(tk.Tk):
 			elif data["type"] == "spigot":
 				runfile = "spigot-" + data["version"] + ".jar"
 				running = running_java
+			elif data["type"] == "paper":
+				runfile = "paper-" + data["version"] + ".jar"
+				running = running_java
 			if os.path.join(os.getcwd(), "servers", server, runfile) in running:
 				state = "Running"
 			else:
@@ -202,6 +205,7 @@ class App(tk.Tk):
 			cwd = os.path.join(os.getcwd(), serverDir)
 			if type == "forge": subprocess.Popen(['"' + os.path.join(cwd, "run.sh") + '"'], cwd = cwd, shell = True, stdout = subprocess.DEVNULL)
 			elif type == "spigot": subprocess.Popen(["java", "-jar", os.path.join(cwd, "spigot-" + cfg["servers"][name]["version"] + ".jar")], cwd = cwd, stdout = subprocess.DEVNULL)
+			elif type == "paper": subprocess.Popen(["java", "-jar", os.path.join(cwd, "paper-" + cfg["servers"][name]["version"] + ".jar")], cwd = cwd, stdout = subprocess.DEVNULL)
 			log.info("Server '" + name + "' started")
 		self.refresh_servers_list()
 	def stop_server(self):
