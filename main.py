@@ -10,8 +10,9 @@ import shutil
 import psutil
 import requests
 import threading
+import PluginsAndModsManagement as pammanage
 
-VERSION = 1
+VERSION = 2
 NAME = "MSMS"
 CONFIG_NAME = "config.json"
 DEFAULT_CONFIG = {"servers": {}, "version": VERSION}
@@ -44,13 +45,27 @@ class ServerCreateHelper(tk.Tk):
                    serverDir]
             log.info("The installation log will be written to the installer.log file")
             log.info(cmd)
-            thread = threading.Thread(target=execute, args=(cmd,))
+            cfg["servers"][name] = {"type": type.lower(), "version": version, "dir": serverDir, "gui": True,
+                                    "state": "Inactive"}
+            thread = threading.Thread(target=self.creating_thread, args=(name, cmd))
             thread.start()
         elif type == "Spigot":
-            cmd = ["java", "-jar", os.path.join("serverfiles", "spigot.jar"), "-o", serverDir, "--rev", version]
+            latest_build = json.loads(requests.get("https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/api/json").text)["number"]
+            log.debug("Latest BuildTools build is " + str(latest_build))
+            installed = [int(i[11:][:-4]) for i in os.listdir("serverfiles") if i[:10] == "BuildTools"]
+            log.debug("BuildTools installed versions: " + " ".join(str(i) for i in installed))
+            latest_installed_build = sorted(installed + [0], reverse=True)[0]
+            if latest_installed_build < latest_build:
+                log.info("Updating BuildTools version from " + str(latest_installed_build) + " to " + str(latest_build))
+                data = requests.get("https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar").content
+                with open(os.path.join("serverfiles", "BuildTools-" + str(latest_build) + ".jar"), "wb") as f:
+                    f.write(data)
+            cmd = ["java", "-jar", os.path.join("serverfiles", "BuildTools-" + str(latest_build) + ".jar"), "-o", serverDir, "--rev", version]
             log.info("The installation log will be written to the BuildTools.log.txt file")
             log.info(cmd)
-            thread = threading.Thread(target=execute, args=(cmd,))
+            cfg["servers"][name] = {"type": type.lower(), "version": version, "dir": serverDir, "gui": True,
+                                    "state": "Inactive"}
+            thread = threading.Thread(target=self.creating_thread, args=(name, cmd))
             thread.start()
         elif type == "Paper":
             jarfile = os.path.join("serverfiles", "paper-" + version + ".jar")
@@ -67,11 +82,17 @@ class ServerCreateHelper(tk.Tk):
                         "https://papermc.io/api/v2/projects/paper/versions/" + version + "/builds/" + latest_build + "/downloads/paper-" + version
                         + "-" + latest_build + ".jar").content)
             shutil.copy(jarfile, serverDir)
+            cfg["servers"][name] = {"type": type.lower(), "version": version, "dir": serverDir, "gui": True,
+                                    "state": "normal"}
         with open(os.path.join(serverDir, "eula.txt"), "w") as f:
             f.write("eula=true")
-        cfg["servers"][name] = {"type": type.lower(), "version": version, "dir": serverDir, "gui": True}
         config_update()
         window.refresh_servers_list()
+    def creating_thread(self, name, cmd):
+        execute(cmd)
+        log.info("Server " + name + " is completely ready")
+        cfg["servers"][name]["state"] = "normal"
+        config_update()
 
 
 class ServerPropertiesEditor(tk.Tk):
@@ -147,6 +168,7 @@ class App(tk.Tk):
     def gui(self):
         super().__init__()
         self.title(NAME)
+        self.iconphoto(True, tk.PhotoImage(file='icon.png'))
         mainmenu = tk.Menu(self)
         servicemenu = tk.Menu(mainmenu)
         servicemenu.add_command(label="Delete unregistred servers", command=self.delete_unregistred_servers)
@@ -162,27 +184,30 @@ class App(tk.Tk):
                                     background=self.fixed_map("background"))
         self.servers_list.tag_configure('running', background='#9dee9d')
         self.servers_list.tag_configure('stopped', background='#ee9d9d')
+        self.servers_list.tag_configure('inactive', background='#D3D3D3')
         self.gui_var = tk.BooleanVar()
         self.chkbtn_gui = ttk.Checkbutton(self, text = "Gui", var = self.gui_var, command = self.chkbox_gui_change)
         self.chkbtn_gui.grid(column=1, row=0)
         self.btn_create = tk.Button(self, text="Create server", activebackground="LightGoldenrodYellow",
-                                    command=ServerCreateHelper)
+                                    command=ServerCreateHelper, bg = "#00d2d2")
         self.btn_create.grid(column=0, row=1)
         self.btn_props = tk.Button(self, text="Server properties", bg="#00d2d2",
-                                   activebackground="LightGoldenrodYellow", command=ServerPropertiesEditor,
-                                   state=tk.DISABLED)
+                                   activebackground="LightGoldenrodYellow", command=ServerPropertiesEditor)
         self.btn_props.grid(column=1, row=1)
         self.btn_start = tk.Button(self, text="Start", bg="#00d2d2", activebackground="LightGoldenrodYellow",
-                                   command=self.start_server, state=tk.DISABLED)
+                                   command=self.start_server)
         self.btn_start.grid(column=2, row=1)
         self.btn_stop = tk.Button(self, text="Stop", bg="#00d2d2", activebackground="LightGoldenrodYellow",
-                                  command=self.stop_server, state=tk.DISABLED)
+                                  command=self.stop_server)
         self.btn_stop.grid(column=3, row=1)
-        self.btn_kill = tk.Button(self, text="Terminate(Kill)", bg="#00d2d2", activebackground="LightGoldenrodYellow",
-                                  command=lambda: self.stop_server(True), state=tk.DISABLED)
-        self.btn_kill.grid(column=4, row=1)
+        self.btn_plugins = tk.Button(self, text="Plugins & mods", bg="#00d2d2", activebackground="LightGoldenrodYellow",
+                                  command=self.open_plugins)
+        self.btn_plugins.grid(column=4, row=1)
+        self.btn_kill = tk.Button(self, text="Kill process", bg="#ca0000", activebackground="LightGoldenrodYellow",
+                                  command=lambda: self.stop_server(True))
+        self.btn_kill.grid(column=5, row=1)
         self.btn_del = tk.Button(self, text="Delete", bg="#00d2d2", activebackground="LightGoldenrodYellow",
-                                 command=self.delete_server, state=tk.DISABLED)
+                                 command=self.delete_server)
         self.btn_del.grid(column=1, row=2)
         self.refresh_servers_list_idle_task()
         self.bind('<<TreeviewSelect>>', self.servers_list_select)
@@ -193,43 +218,56 @@ class App(tk.Tk):
         for item in self.servers_list.get_children():
             self.servers_list.delete(item)
         if len(cfg["servers"]) > 0:
-            running_sh = []
-            running_java = []
-            for pid in psutil.pids():
-               try:
-                    p = psutil.Process(pid)
-                    name = p.name()
-                    if name == "sh":
-                        running_sh.append(p.cmdline()[1])
-                    elif name == "java":
-                        running_java.append(p.cmdline()[2])
-               except:
-                    pass
-            for server in cfg["servers"]:
-                data = cfg["servers"][server]
-                if data["type"] == "forge":
-                    runfile = "run.sh"
-                    running = running_sh
-                elif data["type"] == "spigot":
-                    runfile = "spigot-" + data["version"] + ".jar"
-                    running = running_java
-                elif data["type"] == "paper":
-                    runfile = "paper-" + data["version"] + ".jar"
-                    running = running_java
-                if os.path.join(os.getcwd(), "servers", server, runfile) in running:
-                    state = "Running"
-                else:
-                    state = "Stopped"
-                self.servers_list.insert("", "end", values=(server, data["type"], state), tags=(state.lower(),))
-            self.btn_create.configure(bg = "#00d2d2")
+            for data in self.get_servers_state():
+                self.servers_list.insert("", "end", values=(data["name"], data["data"]["type"], data["state"]), tags=(data["state"].lower(),))
+            if self.btn_create["bg"] == "Yellow": self.btn_create.configure(bg = "#00d2d2")
         else:
-            self.btn_create.configure(bg = "Yellow")
+            if self.btn_create["bg"] == "#00d2d2": self.btn_create.configure(bg = "Yellow")
         self.btn_del.configure(state = tk.DISABLED)
         self.btn_start.configure(state = tk.DISABLED)
         self.btn_stop.configure(state = tk.DISABLED)
         self.btn_kill.configure(state=tk.DISABLED)
         self.btn_props.configure(state = tk.DISABLED)
+        self.btn_plugins.configure(state=tk.DISABLED)
         self.chkbtn_gui.configure(state = tk.DISABLED)
+
+    def get_servers_state(self):
+        running_sh = []
+        running_java = []
+        for pid in psutil.pids():
+            try:
+                p = psutil.Process(pid)
+                name = p.name()
+                if name == "sh":
+                    running_sh.append(p.cmdline()[1])
+                elif name == "java":
+                    running_java.append(p.cmdline()[2])
+            except:
+                pass
+        for server in cfg["servers"]:
+            data = cfg["servers"][server]
+            if data["type"] == "forge":
+                runfile = "run.sh"
+                running = running_sh
+            elif data["type"] == "spigot":
+                runfile = "spigot-" + data["version"] + ".jar"
+                running = running_java
+            elif data["type"] == "paper":
+                runfile = "paper-" + data["version"] + ".jar"
+                running = running_java
+            else:
+                runfile = ""
+            if data["state"].startswith("run"):
+                for run in data["state"].split("run"): exec(run)
+                state = "normal"
+            if data["state"] == "normal":
+                if os.path.join(os.getcwd(), data["dir"], runfile) in running:
+                    state = "Running"
+                else:
+                    state = "Stopped"
+            else:
+                state = data["state"]
+            yield {"name": server, "data": data, "state": state, "runfile": runfile}
 
     def servers_list_select(self, event):
         self.btn_del.configure(state=tk.NORMAL)
@@ -237,13 +275,15 @@ class App(tk.Tk):
         self.btn_stop.configure(state=tk.NORMAL)
         self.btn_kill.configure(state=tk.NORMAL)
         self.btn_props.configure(state=tk.NORMAL)
+        self.btn_plugins.configure(state=tk.NORMAL)
         self.chkbtn_gui.configure(state=tk.NORMAL)
         self.gui_var.set(cfg["servers"][self.servers_list.item(self.servers_list.selection()[0])["values"][0]]["gui"])
 
     def delete_server(self):
         for selected_item in self.servers_list.selection():
             name = self.servers_list.item(selected_item)["values"][0]
-            shutil.rmtree(os.path.join("servers", name))
+            try: shutil.rmtree(os.path.join("servers", name))
+            except: pass
             del cfg["servers"][name]
             log.info("Server '" + name + "' deleted successfully")
         config_update()
@@ -263,22 +303,25 @@ class App(tk.Tk):
             name, type = self.servers_list.item(selected_item)["values"][0], \
                          self.servers_list.item(selected_item)["values"][1]
             data = cfg["servers"][name]
-            serverDir = os.path.join("servers", name)
-            cwd = os.path.join(os.getcwd(), serverDir)
-            userargs = []
-            if not data["gui"]: userargs.append("nogui")
-            if type == "forge":
-                subprocess.Popen(['"' + os.path.join(cwd, "run.sh") + '"'] + userargs, cwd=cwd, shell=True,
-                                 stdout=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
-            elif type == "spigot":
-                subprocess.Popen(
-                    ["java", "-jar", os.path.join(cwd, "spigot-" + data["version"] + ".jar")] + userargs, cwd=cwd,
-                    stdout=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
-            elif type == "paper":
-                subprocess.Popen(
-                    ["java", "-jar", os.path.join(cwd, "paper-" + data["version"] + ".jar")] + userargs, cwd=cwd,
-                    stdout=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
-            log.info("Server '" + name + "' started")
+            serverDir = data["dir"]
+            if serverDir.startswith("run"):
+                for run in serverDir.split("run"): exec(run)
+            else:
+                cwd = os.path.join(os.getcwd(), serverDir)
+                userargs = []
+                if not data["gui"]: userargs.append("nogui")
+                if type == "forge":
+                    subprocess.Popen(['"' + os.path.join(cwd, "run.sh") + '"'] + userargs, cwd=cwd, shell=True,
+                                     stdout=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+                elif type == "spigot":
+                    subprocess.Popen(
+                        ["java", "-jar", os.path.join(cwd, "spigot-" + data["version"] + ".jar")] + userargs, cwd=cwd,
+                        stdout=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+                elif type == "paper":
+                    subprocess.Popen(
+                        ["java", "-jar", os.path.join(cwd, "paper-" + data["version"] + ".jar")] + userargs, cwd=cwd,
+                        stdout=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+                log.info("Server '" + name + "' started")
         self.refresh_servers_list()
 
     def stop_server(self, kill=False):
@@ -313,6 +356,12 @@ class App(tk.Tk):
             name = self.servers_list.item(selected_item)["values"][0]
             cfg["servers"][name]["gui"] = self.gui_var.get()
         config_update()
+    def open_plugins(self):
+        servers = []
+        for selected_item in self.servers_list.selection():
+            name = self.servers_list.item(selected_item)["values"][0]
+            servers.append(cfg["servers"][name])
+        pammanage.PluginsManagement(servers)
 
 
 def execute(cmd, shell=False, cwd=None):
@@ -320,8 +369,8 @@ def execute(cmd, shell=False, cwd=None):
     return_code = popen.wait()
     if return_code:
         log.error("Command " + ' '.join(cmd) + " returned error code " + str(return_code))
-        messagebox.showerror("The operation was performed unsuccessfully",
-                             "Command " + ' '.join(cmd) + " returned error code " + str(return_code))
+        messagebox.showerror('The operation was performed unsuccessfully',
+                             'Command ' + ' '.join(cmd) + ' returned error code ' + str(return_code))
 
 
 def config_update():
@@ -333,12 +382,18 @@ log.basicConfig(level=log.DEBUG, format="%(name)s - %(levelname)s - %(message)s"
 log.getLogger("urllib3").setLevel(log.WARNING)
 if os.path.isfile(CONFIG_NAME):
     cfg = json.load(open(CONFIG_NAME, "r"))
+    if cfg["version"] < VERSION:
+        msg = "Config version({0}) less than {1} version({2})".format(str(cfg["version"]), NAME, str(VERSION))
+        log.warning(msg)
+        messagebox.showwarning("Version warning", msg)
+        cfg["version"] = VERSION
+        config_update()
 else:
     log.info(CONFIG_NAME + " not found, creating")
     json.dump(DEFAULT_CONFIG, open(CONFIG_NAME, "w"))
     cfg = DEFAULT_CONFIG
 if not os.path.isdir("servers"):
-    log.debug("'servers'" + " not found, creating")
+    log.debug("'servers' not found, creating")
     os.mkdir("servers")
 if __name__ == '__main__':
     window = App()
