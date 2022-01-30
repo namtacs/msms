@@ -9,6 +9,8 @@ import json
 import requests
 import time
 from mtranslate import translate
+import webbrowser
+import threading
 
 
 class PluginsManagement(tk.Tk):
@@ -26,12 +28,19 @@ class PluginsManagement(tk.Tk):
 		self.page_columns = 3
 		self.page_plugins = []
 		self.page_data = []
+		self.all_topbar = tk.Frame(self.all_tab)
+		self.all_topbar.grid(column=int(self.page_columns / 2), row=0)
+		self.search_entry = tk.Entry(self.all_topbar)
+		self.search_entry.grid(column=0, row=0)
+		self.search_btn = tk.Button(self.all_topbar, text="Search", command=self.get_page)
+		self.search_btn.grid(column=1, row=0)
 		self.page_spinbox = tk.Spinbox(self.all_tab, from_=1, to=255, command=self.get_page)
-		self.page_spinbox.grid(column=int(self.page_columns / 2), row=int(self.page_size / self.page_columns))
+		self.page_spinbox.grid(column=int(self.page_columns / 2), row=int(self.page_size / self.page_columns) + 1)
 		self.get_page()
 		self.installed_plugins = []
 		self.installed_plugins_ids = []
-		self.load_installed_plugins()
+		thread = threading.Thread(target=self.load_installed_plugins)
+		thread.start()
 		self.mainloop()
 
 	def load_installed_plugins(self):
@@ -76,8 +85,13 @@ class PluginsManagement(tk.Tk):
 	def get_page(self):
 		for i in self.page_plugins:
 			i.destroy()
-		self.page_data = json.loads(requests.get("https://api.spiget.org/v2/resources/free?size=" + str(
-			self.page_size) + "&page=" + self.page_spinbox.get() + "&sort=-updateDate").text)
+		search = self.search_entry.get()
+		if search == "":
+			self.page_data = json.loads(requests.get("https://api.spiget.org/v2/resources/free?size=" + str(
+				self.page_size) + "&page=" + self.page_spinbox.get() + "&sort=-updateDate").text)
+		else:
+			self.page_data = json.loads(requests.get("https://api.spiget.org/v2/search/resources/" + search + "?size=" + str(
+				self.page_size) + "&page=" + self.page_spinbox.get() + "&sort=-updateDate").text)
 		column = 0
 		row = 0
 		for plugin in self.page_data:
@@ -92,7 +106,7 @@ class PluginsManagement(tk.Tk):
 			tk.Label(frame, text=plugin["updateDateFormatted"]).pack()
 			tk.Label(frame, text=plugin["releaseDateFormatted"], fg="gray").pack()
 			frame.bind("<Button-1>", lambda e, p=plugin, s=self.servers: Plugin(p, s))
-			frame.grid(column=column, row=row)
+			frame.grid(column=column, row=row + 1)
 			column += 1
 			if column > self.page_columns - 1:
 				column = 0
@@ -120,9 +134,14 @@ class Plugin(tk.Tk):
 		tk.Label(self, text=self.plugin["name"], font=("Free Avant Garde", 24)).grid(column=0, row=0)
 		self.tag_lbl = tk.Label(self, text=self.plugin["tag"])
 		self.tag_lbl.grid(column=0, row=1)
-		tk.Label(self, text="Update date: " + plugin["updateDateFormatted"]).grid(column=0, row=2)
-		tk.Label(self, text="Release date: " + plugin["releaseDateFormatted"]).grid(column=1, row=2)
-		tk.Button(self, text="Translate", command=self.desc_translate).grid(column=0, row=3)
+		self.dates_topbar = tk.Frame(self)
+		self.dates_topbar.grid(column=0, row=2)
+		tk.Label(self.dates_topbar, text="Update date: " + plugin["updateDateFormatted"]).grid(column=0, row=0)
+		tk.Label(self.dates_topbar, text="Release date: " + plugin["releaseDateFormatted"]).grid(column=1, row=0)
+		self.btns_topbar = tk.Frame(self)
+		self.btns_topbar.grid(column=0, row=3)
+		tk.Button(self.btns_topbar, text="Translate", command=self.desc_translate).grid(column=0, row=0)
+		tk.Button(self.btns_topbar, text="Original", command=self.open_original).grid(column=1, row=0)
 		self.desc = scrolledtext.ScrolledText(self, width=100)
 		self.desc.insert("insert", self.parse_desc(base64.b64decode(self.plugin["description"])))
 		self.desc["state"] = "disabled"
@@ -193,7 +212,7 @@ class Plugin(tk.Tk):
 		self.load()
 
 	def install_plugin(self):
-		data = requests.get("https://spigotmc.org/" + self.plugin["file"]["url"]).content
+		data = requests.get("https://api.spiget.org/v2/resources/{0}/download".format(str(self.plugin["id"]))).content
 		for s in self.servers:
 			with open(os.path.join(s["dir"], "plugins",
 								   self.name_pattern + str(self.plugin["versions"][0]["id"]) + self.plugin["file"][
@@ -244,6 +263,8 @@ class Plugin(tk.Tk):
 		btn = tk.Button(lang_entry, text="Translate", command=translate_desc)
 		btn.grid(column=1, row=0)
 		lang_entry.mainloop()
+	def open_original(self):
+		webbrowser.open_new_tab("https://spigotmc.org/resources/" + str(self.plugin["id"]))
 
 
 log.basicConfig(level=log.DEBUG, format="%(name)s - %(levelname)s - %(message)s")

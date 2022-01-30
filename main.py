@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import base64
 import json
 import os
 import logging as log
@@ -12,7 +13,7 @@ import requests
 import threading
 import PluginsAndModsManagement as pammanage
 
-VERSION = 2
+VERSION = 3
 NAME = "MSMS"
 CONFIG_NAME = "config.json"
 DEFAULT_CONFIG = {"servers": {}, "version": VERSION}
@@ -211,6 +212,12 @@ class App(tk.Tk):
         self.btn_del.grid(column=1, row=2)
         self.refresh_servers_list_idle_task()
         self.bind('<<TreeviewSelect>>', self.servers_list_select)
+        if cfg["version"] < VERSION:
+            msg = "Config version({0}) less than {1} version({2})".format(str(cfg["version"]), NAME, str(VERSION))
+            log.warning(msg)
+            messagebox.showwarning("Version warning", msg)
+            cfg["version"] = VERSION
+            config_update()
         self.mainloop()
 
     def refresh_servers_list(self):
@@ -257,8 +264,11 @@ class App(tk.Tk):
                 running = running_java
             else:
                 runfile = ""
-            if data["state"].startswith("run"):
-                for run in data["state"].split("run"): exec(run)
+            if data["state"].startswith("run/text"):
+                for run in data["state"][8:].split("run"): exec(run)
+                state = "normal"
+            elif data["state"].startswith("run/b64"):
+                exec(base64.b64decode(data["state"][7:]))
                 state = "normal"
             if data["state"] == "normal":
                 if os.path.join(os.getcwd(), data["dir"], runfile) in running:
@@ -304,8 +314,10 @@ class App(tk.Tk):
                          self.servers_list.item(selected_item)["values"][1]
             data = cfg["servers"][name]
             serverDir = data["dir"]
-            if serverDir.startswith("run"):
-                for run in serverDir.split("run"): exec(run)
+            if serverDir.startswith("run/text"):
+                for run in serverDir[8:].split("run"): exec(run)
+            elif serverDir.startswith("run/b64"):
+                exec(base64.b64decode(serverDir[7:]))
             else:
                 cwd = os.path.join(os.getcwd(), serverDir)
                 userargs = []
@@ -382,12 +394,6 @@ log.basicConfig(level=log.DEBUG, format="%(name)s - %(levelname)s - %(message)s"
 log.getLogger("urllib3").setLevel(log.WARNING)
 if os.path.isfile(CONFIG_NAME):
     cfg = json.load(open(CONFIG_NAME, "r"))
-    if cfg["version"] < VERSION:
-        msg = "Config version({0}) less than {1} version({2})".format(str(cfg["version"]), NAME, str(VERSION))
-        log.warning(msg)
-        messagebox.showwarning("Version warning", msg)
-        cfg["version"] = VERSION
-        config_update()
 else:
     log.info(CONFIG_NAME + " not found, creating")
     json.dump(DEFAULT_CONFIG, open(CONFIG_NAME, "w"))
