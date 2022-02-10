@@ -180,7 +180,7 @@ class Plugin(tk.Tk):
 		self.dates_topbar.grid(column=0, row=2)
 		tk.Label(self.dates_topbar, text="Update date: " + plugin["updateDateFormatted"]).grid(column=0, row=0)
 		tk.Label(self.dates_topbar, text="Release date: " + plugin["releaseDateFormatted"]).grid(column=1, row=0)
-		tk.Label(self.dates_topbar, text="Size: " + plugin["file"]["size"] + plugin["file"]["sizeUnit"]).grid(column=2, row=0)
+		tk.Label(self.dates_topbar, text="Size: " + str(plugin["file"]["size"]) + plugin["file"]["sizeUnit"]).grid(column=2, row=0)
 		self.btns_topbar = tk.Frame(self)
 		self.btns_topbar.grid(column=0, row=3)
 		tk.Button(self.btns_topbar, text="Translate", command=self.desc_translate).grid(column=0, row=0)
