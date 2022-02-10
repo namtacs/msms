@@ -21,6 +21,9 @@ DEFAULT_CONFIG = {"servers": {}, "version": VERSION}
 
 class ServerCreateHelper(tk.Tk):
     def __init__(self):
+        pass
+
+    def gui(self):
         super().__init__()
         self.title("Create server")
         nameEntry = tk.Entry(self)
@@ -98,6 +101,9 @@ class ServerCreateHelper(tk.Tk):
 
 class ServerPropertiesEditor(tk.Tk):
     def __init__(self):
+        pass
+
+    def gui(self):
         super().__init__()
         self.title("Server properties editor")
         self.btn_save = tk.Button(self, text="Save", bg="#00d2d2", activebackground="LightGoldenrodYellow",
@@ -189,11 +195,13 @@ class App(tk.Tk):
         self.gui_var = tk.BooleanVar()
         self.chkbtn_gui = ttk.Checkbutton(self, text = "Gui", var = self.gui_var, command = self.chkbox_gui_change)
         self.chkbtn_gui.grid(column=1, row=0)
+        def btn_create_press(): ServerCreateHelper().gui()
         self.btn_create = tk.Button(self, text="Create server", activebackground="LightGoldenrodYellow",
-                                    command=ServerCreateHelper, bg = "#00d2d2")
+                                    command=btn_create_press, bg = "#00d2d2")
         self.btn_create.grid(column=0, row=1)
+        def btn_props_press(): ServerPropertiesEditor().gui()
         self.btn_props = tk.Button(self, text="Server properties", bg="#00d2d2",
-                                   activebackground="LightGoldenrodYellow", command=ServerPropertiesEditor)
+                                   activebackground="LightGoldenrodYellow", command=btn_props_press)
         self.btn_props.grid(column=1, row=1)
         self.btn_start = tk.Button(self, text="Start", bg="#00d2d2", activebackground="LightGoldenrodYellow",
                                    command=self.start_server)
@@ -201,7 +209,7 @@ class App(tk.Tk):
         self.btn_stop = tk.Button(self, text="Stop", bg="#00d2d2", activebackground="LightGoldenrodYellow",
                                   command=self.stop_server)
         self.btn_stop.grid(column=3, row=1)
-        self.btn_plugins = tk.Button(self, text="Plugins & mods", bg="#00d2d2", activebackground="LightGoldenrodYellow",
+        self.btn_plugins = tk.Button(self, text="Plugins", bg="#00d2d2", activebackground="LightGoldenrodYellow",
                                   command=self.open_plugins)
         self.btn_plugins.grid(column=4, row=1)
         self.btn_kill = tk.Button(self, text="Kill process", bg="#ca0000", activebackground="LightGoldenrodYellow",

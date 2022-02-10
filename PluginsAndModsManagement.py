@@ -1,8 +1,10 @@
 import base64
+import shutil
 import tkinter as tk
 from tkinter import scrolledtext
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import filedialog
 import os
 import logging as log
 import json
@@ -11,6 +13,7 @@ import time
 from mtranslate import translate
 import webbrowser
 import threading
+from difflib import SequenceMatcher
 
 
 class PluginsManagement(tk.Tk):
@@ -26,6 +29,16 @@ class PluginsManagement(tk.Tk):
 		self.servers = servers
 		self.page_size = 18
 		self.page_columns = 3
+		# Installed tab
+		self.installed_topbar = tk.Frame(self.installed_tab)
+		self.installed_topbar.grid(column=int(self.page_columns / 2), row=0)
+		self.install_from_file_btn = tk.Button(self.installed_topbar, text="Install plugin from file", command=self.install_plugin_from_file)
+		self.install_from_file_btn.grid(column=0, row=0)
+		self.installed_plugins = []
+		self.installed_plugins_ids = []
+		thread = threading.Thread(target=self.load_installed_plugins)
+		thread.start()
+		# All tab
 		self.page_plugins = []
 		self.page_data = []
 		self.all_topbar = tk.Frame(self.all_tab)
@@ -37,28 +50,32 @@ class PluginsManagement(tk.Tk):
 		self.page_spinbox = tk.Spinbox(self.all_tab, from_=1, to=255, command=self.get_page)
 		self.page_spinbox.grid(column=int(self.page_columns / 2), row=int(self.page_size / self.page_columns) + 1)
 		self.get_page()
-		self.installed_plugins = []
-		self.installed_plugins_ids = []
-		thread = threading.Thread(target=self.load_installed_plugins)
-		thread.start()
 		self.mainloop()
 
 	def load_installed_plugins(self):
 		for i in self.installed_plugins:
 			i.destroy()
 		column = 0
-		row = 0
+		row = 1
 		for s in self.servers:
 			for p in os.listdir(os.path.join(s["dir"], "plugins")):
 				try:
-					name, id, version = p[:p.index(".")].split("-")
+					split = p[:p.rindex(".")].rsplit("-", maxsplit=2)
+					name, id, version = split[0], split[-2], split[-1]
 				except ValueError:
 					continue
 				else:
 					if id in self.installed_plugins_ids:
 						continue
+					elif int(id) == 0:
+						log.debug("Zero id plugin " + name + ", continuing")
+						continue
 					else:
-						plugin = json.loads(requests.get("https://api.spiget.org/v2/resources/" + str(id)).text)
+						try:
+							plugin = json.loads(requests.get("https://api.spiget.org/v2/resources/" + str(id)).text)
+						except Exception as err:
+							log.error('Error "{0}" while parsing installed plugin {1}'.format(str(err), name))
+							continue
 						plugin = self.plugin_parse(plugin)
 						log.debug("Found installed plugin {0} with id {1}".format(name, id))
 						if int(version) < plugin["versions"][0]["id"]:
@@ -90,10 +107,11 @@ class PluginsManagement(tk.Tk):
 			self.page_data = json.loads(requests.get("https://api.spiget.org/v2/resources/free?size=" + str(
 				self.page_size) + "&page=" + self.page_spinbox.get() + "&sort=-updateDate").text)
 		else:
-			self.page_data = json.loads(requests.get("https://api.spiget.org/v2/search/resources/" + search + "?size=" + str(
-				self.page_size) + "&page=" + self.page_spinbox.get() + "&sort=-updateDate").text)
+			self.page_data = json.loads(
+				requests.get("https://api.spiget.org/v2/search/resources/" + search + "?size=" + str(
+					self.page_size) + "&page=" + self.page_spinbox.get() + "&sort=-updateDate").text)
 		column = 0
-		row = 0
+		row = 1
 		for plugin in self.page_data:
 			plugin = self.plugin_parse(plugin)
 			frame = ttk.Frame(self.all_tab, relief="raised", borderwidth=2)
@@ -106,7 +124,7 @@ class PluginsManagement(tk.Tk):
 			tk.Label(frame, text=plugin["updateDateFormatted"]).pack()
 			tk.Label(frame, text=plugin["releaseDateFormatted"], fg="gray").pack()
 			frame.bind("<Button-1>", lambda e, p=plugin, s=self.servers: Plugin(p, s))
-			frame.grid(column=column, row=row + 1)
+			frame.grid(column=column, row=row)
 			column += 1
 			if column > self.page_columns - 1:
 				column = 0
@@ -122,6 +140,30 @@ class PluginsManagement(tk.Tk):
 															  str(struct_time.tm_year))
 		plugin["nameAscii"] = plugin["name"].encode('ascii', 'ignore').decode('ascii')
 		return plugin
+	def install_plugin_from_file(self):
+		files = filedialog.askopenfilenames(filetypes = (("Plugins", "*.jar"), ("All files", "*.*")))
+		for s in self.servers:
+			dir = os.path.join(s["dir"], "plugins")
+			plugins = [f for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f))]
+			for p in files:
+				similarity = {}
+				for i in plugins:
+					if len(i.rsplit("-", maxsplit=2)) == 3:
+						ratio = similar(p[p.rindex(os.sep):], i.rsplit("-", maxsplit=2)[0] + i[i.rindex("."):])
+					else:
+						ratio = similar(p[p.rindex(os.sep):], i)
+					print(p, i, ratio)
+					if ratio > 0.6:
+						similarity[ratio] = i
+				list_keys = list(similarity.keys())
+				list_keys.sort(reverse=True)
+				if list_keys:
+					old_plugin = similarity[list_keys[0]]
+					log.info("Found old plugin " + old_plugin + " on server dir " + s["dir"] + ", replacing")
+					os.remove(os.path.join(dir, old_plugin))
+				shutil.copy(p, dir)
+
+
 
 
 class Plugin(tk.Tk):
@@ -138,6 +180,7 @@ class Plugin(tk.Tk):
 		self.dates_topbar.grid(column=0, row=2)
 		tk.Label(self.dates_topbar, text="Update date: " + plugin["updateDateFormatted"]).grid(column=0, row=0)
 		tk.Label(self.dates_topbar, text="Release date: " + plugin["releaseDateFormatted"]).grid(column=1, row=0)
+		tk.Label(self.dates_topbar, text="Size: " + plugin["file"]["size"] + plugin["file"]["sizeUnit"]).grid(column=2, row=0)
 		self.btns_topbar = tk.Frame(self)
 		self.btns_topbar.grid(column=0, row=3)
 		tk.Button(self.btns_topbar, text="Translate", command=self.desc_translate).grid(column=0, row=0)
@@ -212,13 +255,19 @@ class Plugin(tk.Tk):
 		self.load()
 
 	def install_plugin(self):
-		data = requests.get("https://api.spiget.org/v2/resources/{0}/download".format(str(self.plugin["id"]))).content
-		for s in self.servers:
-			with open(os.path.join(s["dir"], "plugins",
-								   self.name_pattern + str(self.plugin["versions"][0]["id"]) + self.plugin["file"][
-									   "type"]), "wb") as f:
-				f.write(data)
-		self.load()
+		if self.plugin["external"]:
+			messagebox.showinfo("External install",
+								'You will be directed to the site from which you will have to download the plugin and install it using the "install plugin from file" button in the "installed" tab')
+			webbrowser.open_new_tab(self.plugin["file"]["externalUrl"])
+		else:
+			data = requests.get(
+				"https://api.spiget.org/v2/resources/{0}/download".format(str(self.plugin["id"]))).content
+			for s in self.servers:
+				with open(os.path.join(s["dir"], "plugins",
+									   self.name_pattern + str(self.plugin["versions"][0]["id"]) + self.plugin["file"][
+										   "type"]), "wb") as f:
+					f.write(data)
+			self.load()
 
 	def remove_plugin(self):
 		for s in self.servers:
@@ -263,8 +312,12 @@ class Plugin(tk.Tk):
 		btn = tk.Button(lang_entry, text="Translate", command=translate_desc)
 		btn.grid(column=1, row=0)
 		lang_entry.mainloop()
+
 	def open_original(self):
 		webbrowser.open_new_tab("https://spigotmc.org/resources/" + str(self.plugin["id"]))
+
+
+def similar(a, b): return SequenceMatcher(None, a, b).ratio()
 
 
 log.basicConfig(level=log.DEBUG, format="%(name)s - %(levelname)s - %(message)s")
