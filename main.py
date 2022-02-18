@@ -13,7 +13,7 @@ import requests
 import threading
 import PluginsAndModsManagement as pammanage
 
-VERSION = 3
+VERSION = 4
 NAME = "MSMS"
 CONFIG_NAME = "config.json"
 DEFAULT_CONFIG = {"servers": {}, "version": VERSION}
@@ -354,16 +354,16 @@ class App(tk.Tk):
             except:
                 pass
         for selected_item in self.servers_list.selection():
-            name, type = self.servers_list.item(selected_item)["values"][0], \
-                         self.servers_list.item(selected_item)["values"][1]
-            cwd = os.path.join(os.getcwd(), "servers", name)
+            name = self.servers_list.item(selected_item)["values"][0]
+            data = cfg["servers"][name]
+            cwd = os.path.abspath(data["dir"])
             for p in running_java:
                 if p[1] == cwd:
                     if kill:
                         os.kill(p[0], 9)
                     else:
                         os.kill(p[0], 2)
-                    log.debug("Killed " + str(p[0]) + " " + ' '.join(p[2]))
+                    log.debug("Killed {0} {1}".format(str(p[0]), ' '.join(p[2])))
         if kill:
             self.refresh_servers_list()
 

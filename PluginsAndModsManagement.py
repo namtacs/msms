@@ -81,7 +81,7 @@ class PluginsManagement(tk.Tk):
 						if int(version) < plugin["versions"][0]["id"]:
 							frame = tk.Frame(self.installed_tab, relief="raised", borderwidth=2, bg="Orange")
 						else:
-							frame = ttk.Frame(self.installed_tab, relief="raised", borderwidth=2)
+							frame = tk.Frame(self.installed_tab, relief="raised", borderwidth=2)
 						if len(name) > 20:
 							name_font = ("Liberation Sans Narrow", 13, "bold")
 						else:
@@ -90,7 +90,7 @@ class PluginsManagement(tk.Tk):
 						tk.Label(frame, text=plugin["tag"], font=("Liberation Sans Narrow", 10, "italic")).pack()
 						tk.Label(frame, text=plugin["updateDateFormatted"]).pack()
 						tk.Label(frame, text=plugin["releaseDateFormatted"], fg="gray").pack()
-						frame.bind("<Button-1>", lambda e, p=plugin, s=self.servers: Plugin(p, s))
+						frame.bind("<Button-1>", lambda e, p=plugin, s=self.servers: Plugin(p, s, self.install_plugin_from_file))
 						frame.grid(column=column, row=row)
 						column += 1
 						if column > self.page_columns - 1:
@@ -123,7 +123,7 @@ class PluginsManagement(tk.Tk):
 			tk.Label(frame, text=plugin["tag"], font=("Liberation Sans Narrow", 10, "italic")).pack()
 			tk.Label(frame, text=plugin["updateDateFormatted"]).pack()
 			tk.Label(frame, text=plugin["releaseDateFormatted"], fg="gray").pack()
-			frame.bind("<Button-1>", lambda e, p=plugin, s=self.servers: Plugin(p, s))
+			frame.bind("<Button-1>", lambda e, p=plugin, s=self.servers: Plugin(p, s, self.install_plugin_from_file))
 			frame.grid(column=column, row=row)
 			column += 1
 			if column > self.page_columns - 1:
@@ -140,8 +140,8 @@ class PluginsManagement(tk.Tk):
 															  str(struct_time.tm_year))
 		plugin["nameAscii"] = plugin["name"].encode('ascii', 'ignore').decode('ascii')
 		return plugin
-	def install_plugin_from_file(self):
-		files = filedialog.askopenfilenames(filetypes = (("Plugins", "*.jar"), ("All files", "*.*")))
+	def install_plugin_from_file(self, name=None, id=None, version=None):
+		files = filedialog.askopenfilenames(parent=self, filetypes = (("Plugins", "*.jar"), ("All files", "*.*")))
 		for s in self.servers:
 			dir = os.path.join(s["dir"], "plugins")
 			plugins = [f for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f))]
@@ -149,9 +149,9 @@ class PluginsManagement(tk.Tk):
 				similarity = {}
 				for i in plugins:
 					if len(i.rsplit("-", maxsplit=2)) == 3:
-						ratio = similar(p[p.rindex(os.sep):], i.rsplit("-", maxsplit=2)[0] + i[i.rindex("."):])
+						ratio = similar(os.path.basename(p), i.rsplit("-", maxsplit=2)[0] + i[i.rindex("."):])
 					else:
-						ratio = similar(p[p.rindex(os.sep):], i)
+						ratio = similar(os.path.basename(p), i)
 					print(p, i, ratio)
 					if ratio > 0.6:
 						similarity[ratio] = i
@@ -161,17 +161,22 @@ class PluginsManagement(tk.Tk):
 					old_plugin = similarity[list_keys[0]]
 					log.info("Found old plugin " + old_plugin + " on server dir " + s["dir"] + ", replacing")
 					os.remove(os.path.join(dir, old_plugin))
-				shutil.copy(p, dir)
+				if name and id and version:
+					shutil.copy(p, os.path.join(dir, name + "-" + str(id) + "-" + str(version) + p[p.rindex("."):]))
+				else:
+					shutil.copy(p, dir)
 
 
 
 
 class Plugin(tk.Tk):
-	def __init__(self, plugin, servers):
+	def __init__(self, plugin, servers, install_plugin_from_file_func):
 		log.debug("Loading plugin " + plugin["name"])
 		super().__init__()
 		self.plugin = json.loads(requests.get("https://api.spiget.org/v2/resources/" + str(plugin["id"])).text)
+		self.plugin["nameAscii"] = plugin["nameAscii"]
 		self.servers = servers
+		self.install_plugin_from_file = install_plugin_from_file_func
 		self.title(plugin["name"])
 		tk.Label(self, text=self.plugin["name"], font=("Free Avant Garde", 24)).grid(column=0, row=0)
 		self.tag_lbl = tk.Label(self, text=self.plugin["tag"])
@@ -180,15 +185,26 @@ class Plugin(tk.Tk):
 		self.dates_topbar.grid(column=0, row=2)
 		tk.Label(self.dates_topbar, text="Update date: " + plugin["updateDateFormatted"]).grid(column=0, row=0)
 		tk.Label(self.dates_topbar, text="Release date: " + plugin["releaseDateFormatted"]).grid(column=1, row=0)
-		tk.Label(self.dates_topbar, text="Size: " + str(plugin["file"]["size"]) + plugin["file"]["sizeUnit"]).grid(column=2, row=0)
+		if not self.plugin["external"]: tk.Label(self.dates_topbar, text="Size: " + str(plugin["file"]["size"]) + plugin["file"]["sizeUnit"]).grid(column=2, row=0)
+		self.sec_topbar = tk.Frame(self)
+		self.sec_topbar.grid(column=0, row=3)
+		all_servers_supported = True
+		for s in self.servers:
+			if not [v for v in plugin["testedVersions"] if s["version"].startswith(v)]:
+				all_servers_supported = False
+				break
+		if all_servers_supported:
+			tk.Label(self.sec_topbar, text="Supported versions: " + " ".join(plugin["testedVersions"])).grid(column=0, row=0)
+		else:
+			tk.Label(self.sec_topbar, text="Supported versions: " + " ".join(plugin["testedVersions"]), bg="Red").grid(column=0, row=0)
 		self.btns_topbar = tk.Frame(self)
-		self.btns_topbar.grid(column=0, row=3)
+		self.btns_topbar.grid(column=0, row=4)
 		tk.Button(self.btns_topbar, text="Translate", command=self.desc_translate).grid(column=0, row=0)
 		tk.Button(self.btns_topbar, text="Original", command=self.open_original).grid(column=1, row=0)
 		self.desc = scrolledtext.ScrolledText(self, width=100)
 		self.desc.insert("insert", self.parse_desc(base64.b64decode(self.plugin["description"])))
 		self.desc["state"] = "disabled"
-		self.desc.grid(column=0, row=4)
+		self.desc.grid(column=0, row=5)
 		self.name_pattern = plugin["nameAscii"].replace("/", "|") + "-" + str(self.plugin["id"]) + "-"
 		self.load()
 		self.bind("<Return>", lambda e, p=self.plugin: log.debug("Plugin data: " + str(p)))
@@ -257,8 +273,9 @@ class Plugin(tk.Tk):
 	def install_plugin(self):
 		if self.plugin["external"]:
 			messagebox.showinfo("External install",
-								'You will be directed to the site from which you will have to download the plugin and install it using the "install plugin from file" button in the "installed" tab')
+								"You will be directed to the site from which you will have to download the plugin and select it")
 			webbrowser.open_new_tab(self.plugin["file"]["externalUrl"])
+			self.install_plugin_from_file(self.plugin["nameAscii"], self.plugin["id"], self.plugin["versions"][0]["id"])
 		else:
 			data = requests.get(
 				"https://api.spiget.org/v2/resources/{0}/download".format(str(self.plugin["id"]))).content
