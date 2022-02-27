@@ -62,13 +62,10 @@ class PluginsManagement(tk.Tk):
 				try:
 					split = p[:p.rindex(".")].rsplit("-", maxsplit=2)
 					name, id, version = split[0], split[-2], split[-1]
-				except ValueError:
-					continue
+				except ValueError: continue
+				except IndexError: continue
 				else:
 					if id in self.installed_plugins_ids:
-						continue
-					elif int(id) == 0:
-						log.debug("Zero id plugin " + name + ", continuing")
 						continue
 					else:
 						try:
