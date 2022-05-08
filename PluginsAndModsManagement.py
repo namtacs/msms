@@ -137,6 +137,7 @@ class PluginsManagement(tk.Tk):
 															  str(struct_time.tm_year))
 		plugin["nameAscii"] = plugin["name"].encode('ascii', 'ignore').decode('ascii')
 		return plugin
+
 	def install_plugin_from_file(self, name=None, id=None, version=None):
 		files = filedialog.askopenfilenames(parent=self, filetypes = (("Plugins", "*.jar"), ("All files", "*.*")))
 		for s in self.servers:
@@ -162,8 +163,6 @@ class PluginsManagement(tk.Tk):
 					shutil.copy(p, os.path.join(dir, name + "-" + str(id) + "-" + str(version) + p[p.rindex("."):]))
 				else:
 					shutil.copy(p, dir)
-
-
 
 
 class Plugin(tk.Tk):
