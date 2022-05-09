@@ -1,6 +1,6 @@
 name: PyInstaller
 
-on: [push]
+on: push
 
 permissions:
   contents: read
@@ -21,7 +21,7 @@ jobs:
         pip install pyinstaller transliterate
     - name: Build with pyinstaller
       run: |
-        cmd /c 'python -c "import transliterate as t, os;t=t.__file__;os.system(''pyinstaller --onefile --add-data {};transliterate --add-data lang.json;. main.py''.format(t[:t.index(''\\'')]))"'
+        cmd /c 'python -c "import transliterate as t, os;t=t.__file__;os.system(''pyinstaller --noconfirm --onefile --add-data {};transliterate --add-data lang.json;. main.py''.format(t[:t.index(''\\'')]))"'
     - name: Upload compiled file
       uses: actions/upload-artifact@v3
       with:
