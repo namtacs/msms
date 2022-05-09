@@ -1,0 +1,96 @@
+{
+  "en": {
+    "ServerCreateHelper": {
+      "create_title": "Create server",
+      "name_field": "Name:",
+      "type_field": "Type:",
+      "version_field": "Version:",
+      "create_button": "Create",
+      "update_title": "Update server core",
+      "update_button": "Update"
+    },
+    "ServerPropertiesEditor": {
+      "title": "Server properties editor",
+      "save_button": "Save"
+    },
+    "App": {
+      "delete_unregistered_servers": "Delete unregistered servers",
+      "service": "Service",
+      "server_name": "Server name",
+      "server_type": "Type",
+      "server_state": "State",
+      "server_version": "Version",
+      "gui": "Gui",
+      "create_server_button": "Create server",
+      "server_properties_button": "Server properties",
+      "start_button": "Start",
+      "stop_button": "Stop",
+      "plugins_button": "Plugins",
+      "kill_button": "Kill process",
+      "delete_button": "Delete",
+      "update_button": "Update",
+      "config_version_warning": "Config version({0}) less than {1} version({2})",
+      "version_warning": "Version warning",
+      "running": "Running",
+      "stopped": "Stopped",
+      "server_deleted_successfully": "Server '{0}' deleted successfully",
+      "server_deleted": "Server deleted",
+      "settings": "Settings"
+    },
+    "AppSettings": {
+      "title": "Settings",
+      "language_field": "Language:"
+    },
+    "command_error_code": "Command {0} returned error code {1}",
+    "operation_unsuccessfully": "The operation was performed unsuccessfully",
+    "install_jdk": "Install JDK",
+    "jdk_required": "JDK {0} installation required, continue?"
+  },
+  "ru": {
+    "ServerCreateHelper": {
+      "create_title": "Создать сервер",
+      "name_field": "Имя:",
+      "type_field": "Тип:",
+      "version_field": "Версия:",
+      "create_button": "Создать",
+      "update_title": "Обновить ядро сервера",
+      "update_button": "Обновить"
+    },
+    "ServerPropertiesEditor": {
+      "title": "Редактор параметров сервера",
+      "save_button": "Сохранить"
+    },
+    "App": {
+      "delete_unregistered_servers": "Удалить незарегистрированные сервера",
+      "service": "Обслуживание",
+      "server_name": "Имя сервера",
+      "server_type": "Тип",
+      "server_state": "Статус",
+      "server_version": "Версия",
+      "gui": "Интерфейс",
+      "create_server_button": "Создать сервер",
+      "server_properties_button": "Параметры",
+      "start_button": "Старт",
+      "stop_button": "Стоп",
+      "plugins_button": "Плагины",
+      "kill_button": "Убить процесс",
+      "delete_button": "Удалить",
+      "update_button": "Обновить",
+      "config_version_warning": "Версия конфигурации({0}) меньше чем версия {1}({2})",
+      "version_warning": "Предупреждение версии",
+      "running": "Работает",
+      "stopped": "Остановлен",
+      "server_deleted_successfully": "Сервер '{0}' успешно удалён",
+      "server_deleted": "Сервер удалён",
+      "settings": "Настройки"
+    },
+    "AppSettings": {
+      "title": "Настройки",
+      "language_field": "Язык:"
+    },
+    "command_error_code": "Команда {0} возвратила код ошибки {1}",
+    "operation_unsuccessfully": "Операция неуспешна",
+    "install_jdk": "Установить JDK",
+    "jdk_required": "Установка JDK {0} необходима, продолжить?"
+  }
+}
