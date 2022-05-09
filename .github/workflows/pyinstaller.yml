@@ -8,7 +8,6 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
     - name: Set up Python 3.8
       uses: actions/setup-python@v3
       with:
@@ -19,9 +18,9 @@ jobs:
         pip install pyinstaller transliterate
     - name: Build with pyinstaller
       run: |
-        cmd /c "for /f ^%^%i in ('python -c import transliterate as t;t=t.__file__;print(t[:t.index("\\")])') do pyinstaller --onefile --add-data ^%^%i;transliterate lang.json;. main.py"
-
-    - uses: actions/upload-artifact@v3
+        cmd /c 'python -c "import transliterate as t, os;t=t.__file__;os.system(''pyinstaller --onefile --add-data {};transliterate lang.json;. main.py''.format(t[:t.index(''\\'')]))"'
+    - name: Upload compiled file
+      uses: actions/upload-artifact@v3
       with:
         name: main.exe
         path: dist/main.exe
