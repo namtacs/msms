@@ -19,4 +19,9 @@ jobs:
         pip install pyinstaller transliterate
     - name: Build with pyinstaller
       run: |
-        pyinstaller --onefile main.py
+        for /f %%i in ('python -c import transliterate as t;t=t.__file__;print(t[:t.index("\\")])') do pyinstaller --onefile --add-data %%i;transliterate lang.json;. main.py
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: main.exe
+        path: dist/main.exe
