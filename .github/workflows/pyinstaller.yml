@@ -21,7 +21,7 @@ jobs:
         pip install pyinstaller transliterate
     - name: Build with pyinstaller
       run: |
-        cmd /c 'python -c "import transliterate as t, os;t=t.__file__;cmd=''pyinstaller --noconfirm --onefile --add-data {};transliterate/ --add-data lang.json;. main.py''.format(t[:t.index(''\\'')]);print(cmd);os.system(cmd))"'
+        cmd /c 'python -c "import transliterate as t, os;t=t.__file__;cmd=''pyinstaller --noconfirm --onefile --add-data {};transliterate/ --add-data lang.json;. main.py''.format(t[:t.index(''\\'')]);print(cmd);os.system(cmd)"'
     - name: Upload compiled file
       uses: actions/upload-artifact@v3
       with:
