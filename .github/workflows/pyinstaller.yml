@@ -19,6 +19,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install pyinstaller transliterate
+        pip install -r requirements.txt
     - name: Build with pyinstaller
       run: |
         cmd /c 'python -c "import transliterate as t, os;t=t.__file__;cmd=''pyinstaller --noconfirm --onefile --add-data {};transliterate/ --add-data lang.json;. main.py''.format(t[:t.rindex(''\\'')]);print(cmd);os.system(cmd)"'
