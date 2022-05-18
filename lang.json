@@ -7,7 +7,15 @@
       "version_field": "Version:",
       "create_button": "Create",
       "update_title": "Update server core",
-      "update_button": "Update"
+      "update_button": "Update",
+      "server_type_selection_tab": "Server type selection",
+      "game_server": "Game server",
+      "proxy": "Proxy",
+      "mods": "Mods",
+      "plugins": "Plugins",
+      "compatibility": "Compatibility:",
+      "efficiency": "Efficiency:",
+      "suit": "Suit:"
     },
     "ServerPropertiesEditor": {
       "title": "Server properties editor",
@@ -35,7 +43,9 @@
       "stopped": "Stopped",
       "server_deleted_successfully": "Server '{0}' deleted successfully",
       "server_deleted": "Server deleted",
-      "settings": "Settings"
+      "settings": "Settings",
+      "info": "Info",
+      "benchmark": "Benchmark"
     },
     "AppSettings": {
       "title": "Settings",
@@ -54,7 +64,15 @@
       "version_field": "Версия:",
       "create_button": "Создать",
       "update_title": "Обновить ядро сервера",
-      "update_button": "Обновить"
+      "update_button": "Обновить",
+      "server_type_selection_tab": "Подбор типа сервера",
+      "game_server": "Игровой сервер",
+      "proxy": "Прокси",
+      "mods": "Моды",
+      "plugins": "Плагины",
+      "compatibility": "Совместимость:",
+      "efficiency": "Эффективность:",
+      "suit": "Подходит:"
     },
     "ServerPropertiesEditor": {
       "title": "Редактор параметров сервера",
@@ -82,7 +100,9 @@
       "stopped": "Остановлен",
       "server_deleted_successfully": "Сервер '{0}' успешно удалён",
       "server_deleted": "Сервер удалён",
-      "settings": "Настройки"
+      "settings": "Настройки",
+      "info": "Инфо",
+      "benchmark": "Benchmark"
     },
     "AppSettings": {
       "title": "Настройки",

@@ -5,6 +5,7 @@ import logging as log
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import scrolledtext
 import subprocess
 import shutil
 import requests
@@ -18,6 +19,7 @@ import psutil
 from bs4 import BeautifulSoup
 import jdk_manager as jdk
 import argparse
+import sys
 
 VERSION = 6
 NAME = "MSMS"
@@ -37,62 +39,132 @@ DEFAULT_CONFIG = {"servers": {}, "version": VERSION, "lang": os_lang}
 
 
 class ServerCreateHelper(tk.Tk):
+    class ServerTypeSelection(tk.Frame):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            tk.Label(self, text=LANG["ServerCreateHelper"]["type_field"]).grid(column=0, row=0)
+            self.typeComboBox = ttk.Combobox(self, values=(LANG["ServerCreateHelper"]["game_server"], LANG["ServerCreateHelper"]["proxy"]))
+            self.typeComboBox.current(0)
+            self.typeComboBox.bind("<<ComboboxSelected>>", self.change)
+            self.typeComboBox.grid(column=1, row=0)
+            tk.Label(self, text=LANG["ServerCreateHelper"]["compatibility"]).grid(column=0, row=1)
+            self.compatibility_slider = ttk.Scale(self, from_=1, to=5, command=self.change)
+            self.compatibility_slider.grid(column=1, row=1, sticky="w")
+            tk.Label(self, text=LANG["ServerCreateHelper"]["efficiency"]).grid(column=2, row=1)
+            self.efficiency_slider = ttk.Scale(self, from_=1, to=5, command=self.change)
+            self.efficiency_slider.grid(column=3, row=1, sticky="w")
+            self.plugins_var = tk.BooleanVar(self)
+            self.mods_var = tk.BooleanVar(self)
+            self.plugins_chkbtn = tk.Checkbutton(self, text=LANG["ServerCreateHelper"]["plugins"], variable=self.plugins_var,
+                            command=self.change)
+            self.plugins_chkbtn.grid(column=0, row=2)
+            self.mods_chkbtn = tk.Checkbutton(self, text=LANG["ServerCreateHelper"]["mods"], variable=self.mods_var,
+                                                  command=self.change)
+            self.mods_chkbtn.grid(column=1, row=2)
+            tk.Label(self, text=LANG["ServerCreateHelper"]["suit"], pady=30).grid(column=0, row=3)
+            self.done = tk.Label(self)
+            self.done.grid(column=1, row=3, sticky="w")
+            self.change()
+
+        def change(self, e=None):
+            def numrange(one, two):
+                if one > two:
+                    return one-two
+                else:
+                    return two-one
+            t = self.typeComboBox.current()
+            c = self.compatibility_slider.get()
+            e = self.efficiency_slider.get()
+            plugins = self.plugins_var.get()
+            mods = self.mods_var.get()
+            minrange = ""
+            minranger = 999
+            for i in serverrating:
+                name = i
+                i = serverrating[i]
+                if i["type"] != t:
+                    continue
+                if i["plugins"] != plugins:
+                    continue
+                if i["mods"] != mods:
+                    continue
+                r = numrange(i["efficiency"], e) + numrange(i["compatibility"], c)
+                if r < minranger:
+                    minranger = r
+                    minrange = name
+            self.done["text"] = minrange
+
+
+
     def __init__(self):
         pass
 
     def gui(self):
         super().__init__()
         self.title(LANG["ServerCreateHelper"]["create_title"])
-        self.core_icon = tk_image(self, "icons/purpur.png")
+        tab_control = ttk.Notebook(self)
+        self.tab1 = tk.Frame(tab_control)
+        tab2 = self.ServerTypeSelection(tab_control)
+        tab_control.add(self.tab1, text=LANG["ServerCreateHelper"]["create_title"])
+        tab_control.add(tab2, text=LANG["ServerCreateHelper"]["server_type_selection_tab"])
+        self.core_icon = tk_image(self.tab1, res("icons/purpur.png"))
         self.core_icon.grid(column=0, row=0)
-        tk.Label(self, text=LANG["ServerCreateHelper"]["name_field"], padx=5).grid(column=1, row=0)
-        nameEntry = tk.Entry(self)
+        tk.Label(self.tab1, text=LANG["ServerCreateHelper"]["name_field"], padx=5).grid(column=1, row=0)
+        nameEntry = tk.Entry(self.tab1)
         nameEntry.grid(column=2, row=0)
-        tk.Label(self, text=LANG["ServerCreateHelper"]["type_field"], padx=5).grid(column=3, row=0)
-        self.typeComboBox = ttk.Combobox(self, values=("BungeeCord", "Forge", "Spigot", "Paper", "Purpur", "Vanilla"))
+        tk.Label(self.tab1, text=LANG["ServerCreateHelper"]["type_field"], padx=5).grid(column=3, row=0)
+        self.typeComboBox = ttk.Combobox(self.tab1, values=("Velocity", "Forge", "Spigot", "Paper", "Purpur", "Vanilla"))
         self.typeComboBox.bind("<<ComboboxSelected>>", self.type_update)
         self.typeComboBox.current(4)
         self.typeComboBox.grid(column=4, row=0)
-        tk.Label(self, text=LANG["ServerCreateHelper"]["version_field"], padx=5).grid(column=5, row=0)
-        versionEntry = tk.Entry(self, width=5)
+        tk.Label(self.tab1, text=LANG["ServerCreateHelper"]["version_field"], padx=5).grid(column=5, row=0)
+        versionEntry = tk.Entry(self.tab1, width=5)
         versionEntry.grid(column=6, row=0)
-        btn = tk.Button(self, text=LANG["ServerCreateHelper"]["create_button"],
+        btn = tk.Button(self.tab1, text=LANG["ServerCreateHelper"]["create_button"],
                         command=lambda: self.create(nameEntry.get(), self.typeComboBox.get(), versionEntry.get()))
         btn.grid(column=0, row=1)
+        tab_control.grid(column=0, row=0)
         self.mainloop()
 
     def type_update(self, e=None):
         self.core_icon.destroy()
         type = self.typeComboBox.get()
         if type == "Forge":
-            self.core_icon = tk_image(self, "icons/forge.png")
+            self.core_icon = tk_image(self.tab1, res("icons/forge.png"))
             self.core_icon.grid(column=0, row=0)
         elif type == "Spigot":
-            self.core_icon = tk_image(self, "icons/spigot.png")
+            self.core_icon = tk_image(self.tab1, res("icons/spigot.png"))
             self.core_icon.grid(column=0, row=0)
         elif type == "Paper":
-            self.core_icon = tk_image(self, "icons/paper.png")
+            self.core_icon = tk_image(self.tab1, res("icons/paper.png"))
             self.core_icon.grid(column=0, row=0)
         elif type == "Purpur":
-            self.core_icon = tk_image(self, "icons/purpur.png")
+            self.core_icon = tk_image(self.tab1, res("icons/purpur.png"))
             self.core_icon.grid(column=0, row=0)
 
     def update_gui(self, servers_list):
         super().__init__()
         self.title(LANG["ServerCreateHelper"]["update_title"])
-        self.core_icon = tk_image(self, "icons/purpur.png")
+        tab_control = ttk.Notebook(self)
+        tab1 = tk.Frame(tab_control)
+        tab2 = self.ServerTypeSelection(tab_control)
+        tab_control.add(tab1, text=LANG["ServerCreateHelper"]["update_title"])
+        tab_control.add(tab2, text=LANG["ServerCreateHelper"]["server_type_selection_tab"])
+        self.core_icon = tk_image(tab1, res("icons/purpur.png"))
         self.core_icon.grid(column=0, row=0)
-        self.typeComboBox = ttk.Combobox(self, values=("Forge", "Spigot", "Paper", "Purpur", "Vanilla"))
+        tk.Label(tab1, text=LANG["ServerCreateHelper"]["type_field"], padx=5).grid(column=1, row=0)
+        self.typeComboBox = ttk.Combobox(tab1, values=("Forge", "Spigot", "Paper", "Purpur", "Vanilla"))
         self.typeComboBox.bind("<<ComboboxSelected>>", self.type_update)
         self.typeComboBox.current(3)
-        self.typeComboBox.grid(column=1, row=0)
-        lbl = tk.Label(self, text=LANG["ServerCreateHelper"]["version_field"], padx=5)
-        lbl.grid(column=2, row=0)
-        versionEntry = tk.Entry(self, width=5)
-        versionEntry.grid(column=3, row=0)
-        btn = tk.Button(self, text=LANG["ServerCreateHelper"]["update_button"],
+        self.typeComboBox.grid(column=2, row=0)
+        lbl = tk.Label(tab1, text=LANG["ServerCreateHelper"]["version_field"], padx=5)
+        lbl.grid(column=3, row=0)
+        versionEntry = tk.Entry(tab1, width=5)
+        versionEntry.grid(column=4, row=0)
+        btn = tk.Button(tab1, text=LANG["ServerCreateHelper"]["update_button"],
                         command=lambda: self.update_server(servers_list, self.typeComboBox.get(), versionEntry.get()))
         btn.grid(column=0, row=1)
+        tab_control.grid(column=0, row=0)
         self.mainloop()
 
     def create(self, name, type, version):
@@ -101,7 +173,7 @@ class ServerCreateHelper(tk.Tk):
             serverDir = os.path.join("servers", translit(name, reversed=True))
         except LanguageDetectionError:
             serverDir = os.path.join("servers", name)
-        serverDir = serverDir.replace(" ", "_")
+        serverDir = serverDir.replace(" ", "_").replace("'", "")
         os.mkdir(serverDir)
         self.create_core(serverDir, type, version, name)
         with open(os.path.join(serverDir, "eula.txt"), "w") as f:
@@ -119,8 +191,9 @@ class ServerCreateHelper(tk.Tk):
             config_update()
 
     def create_core(self, dir, type, version, name=None):
-        if not install_jdk(version):
-            return
+        if type != "Velocity":
+            if not install_jdk(version):
+                return
         if type == "Forge":
             java = java_path(version)
             r = requests.get("https://files.minecraftforge.net/net/minecraftforge/forge/index_" + version + ".html")
@@ -181,7 +254,7 @@ class ServerCreateHelper(tk.Tk):
             log.info("Latest build is " + latest_build)
             jarfile = os.path.join("serverfiles", "purpur-" + version + "-" + latest_build + ".jar")
             if os.path.isfile(jarfile):
-                log.info("Found cached paper " + version + " build " + latest_build)
+                log.info("Found cached purpur " + version + " build " + latest_build)
             else:
                 log.info("Downloading")
                 with open(jarfile, "wb") as f:
@@ -190,6 +263,27 @@ class ServerCreateHelper(tk.Tk):
             shutil.copy(jarfile, os.path.join(dir, "purpur-" + version + ".jar"))
             if name:
                 cfg["servers"][name] = {"type": type.lower(), "version": version, "dir": dir, "gui": True,
+                                        "state": "normal"}
+        elif type == "Velocity":
+            version = str(
+                json.loads(requests.get("https://papermc.io/api/v2/projects/velocity").text)[
+                    "versions"][-1])
+            latest_build = str(
+                json.loads(requests.get("https://papermc.io/api/v2/projects/velocity/versions/" + version).text)[
+                    "builds"][-1])
+            log.info("Latest build is " + latest_build)
+            jarfile = os.path.join("serverfiles", "paper-" + version + "-" + latest_build + ".jar")
+            if os.path.isfile(jarfile):
+                log.info("Found cached velocity " + version + " build " + latest_build)
+            else:
+                log.info("Downloading")
+                with open(jarfile, "wb") as f:
+                    f.write(requests.get(
+                        "https://papermc.io/api/v2/projects/velocity/versions/" + version + "/builds/" + latest_build + "/downloads/velocity-" + version
+                        + "-" + latest_build + ".jar").content)
+            shutil.copy(jarfile, os.path.join(dir, "velocity-" + version + ".jar"))
+            if name:
+                cfg["servers"][name] = {"type": type.lower(), "version": version, "dir": dir,
                                         "state": "normal"}
 
     def creating_thread(self, name, cmd):
@@ -203,8 +297,26 @@ class ServerCreateHelper(tk.Tk):
 
 
 class ServerPropertiesEditor(tk.Tk):
+    ccodes = [
+        (r"\u00a74", "&dark_red"),
+        (r"\u00a7c", "&red"),
+        (r"\u00a76", "&gold"),
+        (r"\u00a7e", "&yellow"),
+        (r"\u00a72", "&dark_green"),
+        (r"\u00a7a", "&green"),
+        (r"\u00a7b", "&aqua"),
+        (r"\u00a73", "&dark_aqua"),
+        (r"\u00a71", "&dark_blue"),
+        (r"\u00a79", "&blue"),
+        (r"\u00a7d", "&light_purple"),
+        (r"\u00a75", "&dark_purple"),
+        (r"\u00a7f", "&white"),
+        (r"\u00a77", "&gray"),
+        (r"\u00a78", "&dark_gray"),
+        (r"\u00a70", "&black")]
     def __init__(self):
-        pass
+        self.keys = []
+        self.entrys = []
 
     def gui(self, servers_list):
         super().__init__()
@@ -212,46 +324,40 @@ class ServerPropertiesEditor(tk.Tk):
         self.btn_save = tk.Button(self, text=LANG["ServerPropertiesEditor"]["save_button"], bg="#00d2d2", activebackground="LightGoldenrodYellow",
                                   command=self.save)
         self.btn_save.grid(column=0, row=0)
-        self.file = os.path.join(cfg["servers"][servers_list.item(servers_list.selection()[0])["values"][0]]["dir"],
-                                 "server.properties")
-        self.ccodes = [
-            (r"\u00a74", "&dark_red"),
-            (r"\u00a7c", "&red"),
-            (r"\u00a76", "&gold"),
-            (r"\u00a7e", "&yellow"),
-            (r"\u00a72", "&dark_green"),
-            (r"\u00a7a", "&green"),
-            (r"\u00a7b", "&aqua"),
-            (r"\u00a73", "&dark_aqua"),
-            (r"\u00a71", "&dark_blue"),
-            (r"\u00a79", "&blue"),
-            (r"\u00a7d", "&light_purple"),
-            (r"\u00a75", "&dark_purple"),
-            (r"\u00a7f", "&white"),
-            (r"\u00a77", "&gray"),
-            (r"\u00a78", "&dark_gray"),
-            (r"\u00a70", "&black")]
-        self.keys = []
-        self.entrys = []
-        with open(self.file, "r") as file:
-            column = 0
-            row = 1
-            for line in file:
-                if line[0] != "#":
-                    key, value = line[:-1].split("=")
-                    self.keys.append(key)
-                    tk.Label(self, text=key).grid(column=column, row=row)
-                    entry = tk.Entry(self, bg="#D3D3D3", bd=0)
-                    if key == "motd":
-                        value = json.loads('"' + value + '"')
-                        value = self.replace_ccodes(value)
-                    entry.insert(0, value)
-                    entry.grid(column=column + 1, row=row)
-                    self.entrys.append(entry)
-                    column += 2
-                    if column > 4:
-                        column = 0
-                        row += 1
+        data = cfg["servers"][servers_list.item(servers_list.selection()[0])["values"][0]]
+        if data["type"] == "velocity":
+            filename = "velocity.toml"
+            self.method = "text"
+        else:
+            filename = "server.properties"
+            self.method = "default"
+        self.file = os.path.join(data["dir"],
+                                 filename)
+        if self.method == "default":
+            with open(self.file, "r") as file:
+                column = 0
+                row = 1
+                for line in file:
+                    if not line.startswith("#"):
+                        key, value = line[:-1].split("=")
+                        self.keys.append(key)
+                        tk.Label(self, text=key).grid(column=column, row=row)
+                        entry = tk.Entry(self, bg="#D3D3D3", bd=0)
+                        if key == "motd":
+                            value = json.loads('"' + value + '"')
+                            value = self.replace_ccodes(value)
+                        entry.insert(0, value)
+                        entry.grid(column=column + 1, row=row)
+                        self.entrys.append(entry)
+                        column += 2
+                        if column > 4:
+                            column = 0
+                            row += 1
+        elif self.method == "text":
+            self.text = scrolledtext.ScrolledText(self)
+            with open(self.file, "r") as f:
+                self.text.insert("insert", f.read())
+            self.text.grid(column=0, row=1)
         self.mainloop()
 
     def replace_ccodes(self, text, reverse=False):
@@ -262,15 +368,22 @@ class ServerPropertiesEditor(tk.Tk):
                 text = text.replace(ccode[0], ccode[1])
         return text
 
-    def save(self):
-        with open(self.file, "w") as file:
-            file.write("# Edited with " + NAME + "\n")
-            for i in range(len(self.keys)):
-                value = self.entrys[i].get()
-                if self.keys[i] == "motd":
-                    value = json.dumps(value)[1:-1]
-                    value = self.replace_ccodes(value, True)
-                file.write(self.keys[i] + "=" + value + "\n")
+    def save(self, use_get=True):
+        if self.method == "default":
+            with open(self.file, "w") as file:
+                file.write("# Edited with " + NAME + "\n")
+                for i in range(len(self.keys)):
+                    if use_get:
+                        value = self.entrys[i].get()
+                    else:
+                        value = self.entrys[i]
+                    if self.keys[i] == "motd":
+                        value = json.dumps(value)[1:-1]
+                        value = self.replace_ccodes(value, True)
+                    file.write(self.keys[i] + "=" + value + "\n")
+        elif self.method == "text":
+            with open(self.file, "w") as file:
+                file.write(self.text.get("1.0","end-1c"))
 
 
 class App(tk.Tk):
@@ -284,14 +397,16 @@ class App(tk.Tk):
     def gui(self):
         super().__init__()
         self.title(NAME)
-        self.iconphoto(True, tk.PhotoImage(file='icons/icon.png'))
+        self.iconphoto(True, tk.PhotoImage(file=res("icons/icon.png")))
         mainmenu = tk.Menu(self)
         servicemenu = tk.Menu(mainmenu)
+        infomenu = tk.Menu(mainmenu)
         def settings_open(): AppSettings(self)
         servicemenu.add_command(label=LANG["App"]["settings"],
                                 command=settings_open)
         servicemenu.add_command(label=LANG["App"]["delete_unregistered_servers"], command=self.delete_unregistered_servers)
         mainmenu.add_cascade(label=LANG["App"]["service"], menu=servicemenu)
+        mainmenu.add_cascade(label=LANG["App"]["info"], menu=infomenu)
         self.config(menu=mainmenu)
         self.servers_list = ttk.Treeview(self, columns=("name", "type", "state", "version"), show="headings")
         self.servers_list.heading('name', text=LANG["App"]["server_name"])
@@ -311,7 +426,7 @@ class App(tk.Tk):
         self.options_frame = tk.Frame(self)
         self.options_frame.grid(column=1, row=0, sticky="nw")
         self.gui_var = tk.BooleanVar()
-        self.chkbtn_gui = ttk.Checkbutton(self.options_frame, text = LANG["App"]["gui"], var = self.gui_var, command = self.chkbox_gui_change)
+        self.chkbtn_gui = tk.Checkbutton(self.options_frame, text = LANG["App"]["gui"], variable = self.gui_var, command = self.chkbox_gui_change)
         self.chkbtn_gui.grid(column=0, row=0)
         def btn_create_press(): ServerCreateHelper().gui()
         self.btn_create = tk.Button(self, text=LANG["App"]["create_server_button"], activebackground="LightGoldenrodYellow",
@@ -361,7 +476,7 @@ class App(tk.Tk):
                 self.servers_list.delete(item)
             if len(cfg["servers"]) > 0:
                 for data in list:
-                    self.servers_list.insert("", "end", values=(data["name"], data["data"]["type"], data["state"], data["data"]["version"]), tags=(data["state"].lower(),))
+                    self.servers_list.insert("", "end", values=(data["name"], data["data"]["type"], LANG["App"][data["state"]], data["data"]["version"]), tags=(data["state"],))
                 if self.btn_create["bg"] == "Yellow": self.btn_create.configure(bg = "#00d2d2")
             else:
                 if self.btn_create["bg"] == "#00d2d2": self.btn_create.configure(bg = "Yellow")
@@ -391,8 +506,12 @@ class App(tk.Tk):
         for server in cfg["servers"]:
             data = cfg["servers"][server]
             if data["type"] == "forge":
-                runfile = "run.sh"
-                running = running_sh
+                if main_version(data["version"]) > 16:
+                    runfile = "run.sh"
+                    running = running_sh
+                else:
+                    runfile = "forge-" + data["version"]
+                    running = running_java
             elif data["type"] == "spigot":
                 runfile = "spigot-" + data["version"] + ".jar"
                 running = running_java
@@ -405,10 +524,10 @@ class App(tk.Tk):
             else:
                 runfile = ""
             if data["state"] == "normal":
-                if os.path.join(os.getcwd(), data["dir"], runfile) in running:
-                    state = LANG["App"]["running"]
+                if [i for i in running if os.path.join(data["dir"], runfile) in i]:
+                    state = "running"
                 else:
-                    state = LANG["App"]["stopped"]
+                    state = "stopped"
             else:
                 state = data["state"]
             yield {"name": server, "data": data, "state": state, "runfile": runfile}
@@ -419,7 +538,10 @@ class App(tk.Tk):
         self.btn_stop.configure(state=tk.NORMAL)
         self.btn_kill.configure(state=tk.NORMAL)
         self.btn_props.configure(state=tk.NORMAL)
-        self.btn_plugins.configure(state=tk.NORMAL)
+        if all([cfg["servers"][self.servers_list.item(sel)["values"][0]]["type"] in ["spigot","paper","purpur"] for sel in self.servers_list.selection()]):
+            self.btn_plugins.configure(state=tk.NORMAL)
+        else:
+            self.btn_plugins.configure(state=tk.DISABLED)
         self.btn_update.configure(state=tk.NORMAL)
         self.chkbtn_gui.configure(state=tk.NORMAL)
         self.gui_var.set(cfg["servers"][self.servers_list.item(self.servers_list.selection()[0])["values"][0]]["gui"])
@@ -443,32 +565,38 @@ class App(tk.Tk):
                     log.info("Server '{0}' deleted successfully".format(d))
                     messagebox.showinfo(LANG["App"]["server_deleted"], LANG["App"]["server_deleted_successfully"].format(d))
 
-    def start_server(self):
-        for selected_item in self.servers_list.selection():
-            name, type = self.servers_list.item(selected_item)["values"][0], \
-                         self.servers_list.item(selected_item)["values"][1]
+    def start_server(self, namelist=None):
+        if not namelist:
+            namelist = [self.servers_list.item(selected_item)["values"] for selected_item in self.servers_list.selection()]
+        for item in namelist:
+            name, type = item[0], item[1]
             data = cfg["servers"][name]
             serverDir = data["dir"]
             cwd = os.path.join(os.getcwd(), serverDir)
             userargs = []
             java = java_path(data["version"])
             log.debug("Java path: " + java)
-            if not data["gui"]: userargs.append("nogui")
+            if "gui" in data and not data["gui"]: userargs.append("nogui")
             if type == "forge":
-                if OS == "Linux":
-                    subprocess.Popen(['"' + os.path.join(cwd, "run.sh") + '"'] + userargs, cwd=cwd, shell=True)
-                elif OS == "Windows":
-                    lines = []
-                    with open(os.path.join(cwd, "run.bat"), "r") as f:
-                        for line in f:
-                            if not "pause" in line:
-                                lines.append(line)
-                            else:
-                                log.debug("Removed pause in run.bat")
-                    with open(os.path.join(cwd, "run.bat"), "w") as f:
-                        for line in lines:
-                            f.write(line)
-                    subprocess.Popen(["run.bat"] + userargs, cwd=cwd, shell=True)
+                if main_version(data["version"]) > 16:
+                    if OS == "Linux":
+                        subprocess.Popen(['"' + os.path.join(cwd, "run.sh") + '"'] + userargs, cwd=cwd, shell=True)
+                    elif OS == "Windows":
+                        lines = []
+                        with open(os.path.join(cwd, "run.bat"), "r") as f:
+                            for line in f:
+                                if not "pause" in line:
+                                    lines.append(line)
+                                else:
+                                    log.debug("Removed pause in run.bat")
+                        with open(os.path.join(cwd, "run.bat"), "w") as f:
+                            for line in lines:
+                                f.write(line)
+                        subprocess.Popen(["run.bat"] + userargs, cwd=cwd, shell=True)
+                else:
+                    forgefile = [i for i in os.listdir(serverDir) if i.startswith("forge-" + data["version"]) and i.endswith(".jar")][0]
+                    subprocess.Popen(
+                        [java, "-jar", os.path.join(cwd, forgefile)] + userargs, cwd=cwd)
             elif type == "spigot":
                 subprocess.Popen(
                     [java, "-jar", os.path.join(cwd, "spigot-" + data["version"] + ".jar")] + userargs, cwd=cwd)
@@ -478,10 +606,13 @@ class App(tk.Tk):
             elif type == "purpur":
                 subprocess.Popen(
                     [java, "-jar", os.path.join(cwd, "purpur-" + data["version"] + ".jar")] + userargs, cwd=cwd)
+            elif type == "velocity":
+                subprocess.Popen(
+                    [java, "-jar", os.path.join(cwd, "velocity-" + data["version"] + ".jar")] + userargs, cwd=cwd)
             log.info("Server '" + name + "' started")
         self.refresh_servers_list()
 
-    def stop_server(self, kill=False):
+    def stop_server(self, kill=False, namelist=None):
         running_java = []
         for pid in psutil.pids():
             try:
@@ -491,8 +622,10 @@ class App(tk.Tk):
                     running_java.append((pid, p.cwd(), p.cmdline()))
             except:
                 pass
-        for selected_item in self.servers_list.selection():
-            name = self.servers_list.item(selected_item)["values"][0]
+        if not namelist:
+            namelist = [self.servers_list.item(selected_item)["values"] for selected_item in self.servers_list.selection()]
+        for name in namelist:
+            name = name[0]
             data = cfg["servers"][name]
             cwd = os.path.abspath(data["dir"])
             for p in running_java:
@@ -529,18 +662,27 @@ class AppSettings(tk.Tk):
         self.app = app
         self.title(LANG["AppSettings"]["title"])
         tk.Label(self, text=LANG["AppSettings"]["language_field"], padx=5).grid(column=0, row=0)
-        self.lang = ttk.Combobox(self, values=("en", "ru"))
+        self.lang = ttk.Combobox(self, values=languages)
+        self.lang.current(languages.index(os_lang))
         self.lang.bind("<<ComboboxSelected>>", self.lang_select)
         self.lang.grid(column=1, row=0)
         self.mainloop()
 
     def lang_select(self, e=None):
-        global LANG, window
-        LANG = json.load(open("lang.json", "r"))[self.lang.get()]
-        self.app.destroy()
+        global LANG, os_lang
+        os_lang = self.lang.get()
+        cfg["lang"] = os_lang
+        config_update()
+        LANG = json.load(open("lang.json", "r"))[os_lang]
         self.destroy()
-        window = App()
-        window.gui()
+        app_restart(self.app, App)
+
+
+def app_restart(destroy_app, create_app):
+    global window
+    destroy_app.destroy()
+    window = create_app()
+    window.gui()
 
 
 def execute(cmd, shell=False, cwd=None):
@@ -602,6 +744,16 @@ def java_path(minecraft_version):
             return os.path.join(os.getcwd(), "jdk", [i for i in os.listdir("jdk") if i.startswith("jdk-17")][0], "bin", "java")
 
 
+def res(path):
+    """Pyinstaller bundled data access.
+    PyInstaller creates a temp folder and stores path in _MEIPASS."""
+    try:
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = "."
+    return os.path.join(base_path, path)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Minecraft Servers Management System")
     parser.add_argument('--script', type=str, nargs='+', metavar="path",
@@ -629,7 +781,7 @@ log.getLogger("PIL").setLevel(log.INFO)
 parse_args()
 # Create necessary files and directories
 if os.path.isfile(CONFIG_NAME):
-    cfg = json.load(open(CONFIG_NAME, "r"))
+    cfg: dict = json.load(open(CONFIG_NAME, "r"))
 else:
     log.info(CONFIG_NAME + " not found, creating")
     json.dump(DEFAULT_CONFIG, open(CONFIG_NAME, "w"))
@@ -639,13 +791,14 @@ for i in ["servers", "serverfiles", "jdk"]:
         log.debug(f"{i} dir not found, creating")
         os.mkdir(i)
 # Load language
-LANG = json.load(open("lang.json", "r"))
+LANG = json.load(open(res("lang.json"), "r"))
+languages = list(LANG.keys())
 os_lang = cfg["lang"]
-if os_lang in LANG:
-    LANG = LANG[os_lang]
-else:
-    LANG = LANG["en"]
+if not os_lang in languages:
+    os_lang = "en"
+LANG = LANG[os_lang]
 # Launch main app
+serverrating = json.load(open(res("serverrating.json"), "r"))
 if __name__ == '__main__':
     window = App()
     window.gui()

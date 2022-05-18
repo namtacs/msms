@@ -1,0 +1,37 @@
+{
+  "Forge": {
+    "type": 0,
+    "efficiency": 2,
+    "compatibility": 5,
+    "mods": true,
+    "plugins": false
+  },
+  "Spigot": {
+    "type": 0,
+    "efficiency": 3,
+    "compatibility": 4,
+    "mods": false,
+    "plugins": true
+  },
+  "Paper": {
+    "type": 0,
+    "efficiency": 4,
+    "compatibility": 3,
+    "mods": false,
+    "plugins": true
+  },
+  "Purpur": {
+    "type": 0,
+    "efficiency": 5,
+    "compatibility": 2.5,
+    "mods": false,
+    "plugins": true
+  },
+  "Vanilla": {
+    "type": 0,
+    "efficiency": 1,
+    "compatibility": 1,
+    "mods": false,
+    "plugins": false
+  }
+}
