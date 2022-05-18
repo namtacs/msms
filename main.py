@@ -791,7 +791,7 @@ for i in ["servers", "serverfiles", "jdk"]:
         log.debug(f"{i} dir not found, creating")
         os.mkdir(i)
 # Load language
-LANG = json.load(open(res("lang.json"), "r"))
+LANG = json.load(open(res("lang.json"), "r", encoding="UTF-8"))
 languages = list(LANG.keys())
 os_lang = cfg["lang"]
 if not os_lang in languages:
