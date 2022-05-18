@@ -22,7 +22,7 @@ jobs:
         pip install -r requirements.txt
     - name: Build with pyinstaller
       run: |
-        cmd /c 'python -c "import transliterate as t, os;t=t.__file__;cmd=''pyinstaller --noconfirm --onefile --add-data {};transliterate/ --add-data lang.json;. main.py''.format(t[:t.rindex(''\\'')]);print(cmd);os.system(cmd)"'
+        cmd /c 'python -c "import transliterate as t, os;t=t.__file__;include_files=''''.join(['' --add-data ''+i+'';. '' for i in os.listdir(''.'') if os.path.isfile(i) and not i.endswith(''.py'')]);include_dirs=''''.join(['' --add-data ''+i+'';''+i+''\\ '' for i in os.listdir(''.'') if os.path.isdir(i)]);cmd=''pyinstaller --noconfirm --onefile --add-data {};transliterate\\{}{}main.py''.format(t[:t.rindex(''\\'')], include_files, include_dirs);print(cmd);os.system(cmd)"'
     - name: Upload compiled file
       uses: actions/upload-artifact@v3
       with:
