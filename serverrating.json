@@ -22,8 +22,8 @@
   },
   "Purpur": {
     "type": 0,
-    "efficiency": 5,
-    "compatibility": 2.5,
+    "efficiency": 4.5,
+    "compatibility": 3,
     "mods": false,
     "plugins": true
   },
