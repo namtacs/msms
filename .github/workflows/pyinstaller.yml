@@ -11,20 +11,22 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3.5.3
+    - uses: actions/checkout@v3
     - name: Set up Python 3.11
-      uses: actions/setup-python@v4.7.0
+      uses: actions/setup-python@v4
       with:
         python-version: 3.11
     - name: Install dependencies
       run: |
         pip install pyinstaller transliterate -U
         pip install -r requirements.txt -U
+    - name: Python Syntax Checker
+      uses: cclauss/Find-Python-syntax-errors-action@master
     - name: Build with pyinstaller
       run: |
         cmd /c 'python -c "import transliterate as t, os;t=t.__file__;include_files=''''.join(['' --add-data ''+i+'';. '' for i in os.listdir(''.'') if os.path.isfile(i) and not i.endswith(''.py'')]);include_dirs=''''.join(['' --add-data ''+i+'';''+i+''\\ '' for i in os.listdir(''.'') if os.path.isdir(i)]);cmd=''pyinstaller --noconfirm --onefile --add-data {};transliterate\\{}{}main.py''.format(t[:t.rindex(''\\'')], include_files, include_dirs);print(cmd);os.system(cmd)"'
     - name: Upload compiled file
-      uses: actions/upload-artifact@v3.1.2
+      uses: actions/upload-artifact@v3
       with:
         name: main.exe
         path: dist/main.exe
