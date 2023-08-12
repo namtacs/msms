@@ -27,12 +27,13 @@ jobs:
         pip install -r requirements.txt -U
     - name: Build with pyinstaller
       run: |
-        pyinstaller --noconfirm --onefile --windowed --add-data "lang.json;." --add-data "serverrating.json;." --add-data "icons;icons\" --collect-all transliterate main.py
+        pyinstaller --noconfirm --onefile --windowed --add-data "lang.json;." --add-data "serverrating.json;." --add-data "icons;icons\" --collect-all transliterate --name msms main.py
     - name: Upload bundled file
       uses: actions/upload-artifact@v3
       with:
         name: msms-windows.exe
-        path: dist/main.exe
+        path: dist/msms.exe
+        if-no-files-found: error
   build-linux:
     name: Build on Linux
     runs-on: ubuntu-latest
@@ -53,9 +54,10 @@ jobs:
         flake8 . --count --select=E9,F63,F72,F82 --show-source --statistics
     - name: Build with pyinstaller
       run: |
-        pyinstaller --noconfirm --onefile --windowed --add-data lang.json:. --add-data serverrating.json:. --add-data icons:icons/ --collect-all transliterate main.py
+        pyinstaller --noconfirm --onefile --windowed --add-data lang.json:. --add-data serverrating.json:. --add-data icons:icons/ --collect-all transliterate --name msms main.py
     - name: Upload bundled file
       uses: actions/upload-artifact@v3
       with:
         name: msms-linux
-        path: dist/main
+        path: dist/msms
+        if-no-files-found: error
