@@ -23,7 +23,7 @@ import argparse
 import sys
 import webbrowser
 
-VERSION = 6
+VERSION = 7
 NAME = "MSMS"
 CONFIG_NAME = "config.json"
 OS = platform.system()
@@ -58,18 +58,13 @@ class ServerCreateHelper(tk.Tk):
             self.typeComboBox.current(0)
             self.typeComboBox.bind("<<ComboboxSelected>>", self.change)
             self.typeComboBox.grid(column=1, row=0)
-            tk.Label(self, text=LANG["ServerCreateHelper"]["compatibility"]).grid(
+            tk.Label(self, text=LANG["ServerCreateHelper"]["efficiency"]).grid(
                 column=0, row=1
             )
-            self.compatibility_slider = ttk.Scale(
-                self, from_=1, to=5, command=self.change
-            )
-            self.compatibility_slider.grid(column=1, row=1, sticky="w")
-            tk.Label(self, text=LANG["ServerCreateHelper"]["efficiency"]).grid(
-                column=2, row=1
-            )
-            self.efficiency_slider = ttk.Scale(self, from_=1, to=5, command=self.change)
-            self.efficiency_slider.grid(column=3, row=1, sticky="w")
+            self.efficiency_slider = ttk.Scale(self, from_=1, to=5)
+            self.efficiency_slider.set(5)
+            self.efficiency_slider.configure(command=self.change)
+            self.efficiency_slider.grid(column=1, row=1)
             self.plugins_var = tk.BooleanVar(self)
             self.mods_var = tk.BooleanVar(self)
             self.plugins_chkbtn = tk.Checkbutton(
@@ -86,7 +81,7 @@ class ServerCreateHelper(tk.Tk):
                 command=self.change,
             )
             self.mods_chkbtn.grid(column=1, row=2)
-            tk.Label(self, text=LANG["ServerCreateHelper"]["suit"], pady=30).grid(
+            tk.Label(self, text=LANG["ServerCreateHelper"]["suit"], pady=20).grid(
                 column=0, row=3
             )
             self.done = tk.Label(self)
@@ -94,14 +89,7 @@ class ServerCreateHelper(tk.Tk):
             self.change()
 
         def change(self, e=None):
-            def numrange(one, two):
-                if one > two:
-                    return one - two
-                else:
-                    return two - one
-
             t = self.typeComboBox.current()
-            c = self.compatibility_slider.get()
             e = self.efficiency_slider.get()
             plugins = self.plugins_var.get()
             mods = self.mods_var.get()
@@ -116,7 +104,7 @@ class ServerCreateHelper(tk.Tk):
                     continue
                 if i["mods"] != mods:
                     continue
-                r = numrange(i["efficiency"], e) + numrange(i["compatibility"], c)
+                r = abs(i["efficiency"] - e)
                 if r < minranger:
                     minranger = r
                     minrange = name
@@ -157,7 +145,7 @@ class ServerCreateHelper(tk.Tk):
         ).grid(column=5, row=0)
         versionEntry = tk.Entry(self.tab1, width=5)
         versionEntry.grid(column=6, row=0)
-        btn = tk.Button(
+        btn = ttk.Button(
             self.tab1,
             text=LANG["ServerCreateHelper"]["create_button"],
             command=lambda: self.create(
@@ -209,7 +197,7 @@ class ServerCreateHelper(tk.Tk):
         lbl.grid(column=3, row=0)
         versionEntry = tk.Entry(tab1, width=5)
         versionEntry.grid(column=4, row=0)
-        btn = tk.Button(
+        btn = ttk.Button(
             tab1,
             text=LANG["ServerCreateHelper"]["update_button"],
             command=lambda: self.update_server(
@@ -492,11 +480,9 @@ class ServerPropertiesEditor(tk.Tk):
     def gui(self, servers_list):
         super().__init__()
         self.title(LANG["ServerPropertiesEditor"]["title"])
-        self.btn_save = tk.Button(
+        self.btn_save = ttk.Button(
             self,
             text=LANG["ServerPropertiesEditor"]["save_button"],
-            bg="#00d2d2",
-            activebackground="LightGoldenrodYellow",
             command=self.save,
         )
         self.btn_save.grid(column=0, row=0)
@@ -736,6 +722,12 @@ class AppTk(tk.Tk, App):
         super().__init__()
         self.title(NAME)
         self.iconphoto(True, tk.PhotoImage(file=res("icons/icon.png")))
+        ttk.Style().configure("TButton", background="#00d2d2")
+        # Make a yellow button
+        ttk.Style().configure("TButtonAccent", **ttk.Style().configure("TButton"))
+        ttk.Style().map("TButtonAccent", **ttk.Style().map("TButton"))
+        ttk.Style().layout("TButtonAccent", ttk.Style().layout("TButton"))
+        ttk.Style().configure("TButtonAccent", background="Yellow")
         mainmenu = tk.Menu(self)
         servicemenu = tk.Menu(mainmenu)
         infomenu = tk.Menu(mainmenu)
@@ -785,12 +777,8 @@ class AppTk(tk.Tk, App):
         def btn_create_press():
             ServerCreateHelper().gui()
 
-        self.btn_create = tk.Button(
-            self,
-            text=LANG["App"]["create_server_button"],
-            activebackground="LightGoldenrodYellow",
-            command=btn_create_press,
-            bg="#00d2d2",
+        self.btn_create = ttk.Button(
+            self, text=LANG["App"]["create_server_button"], command=btn_create_press
         )
         self.btn_create.grid(column=0, row=1)
         self.actions_frame = tk.Frame(self)
@@ -799,11 +787,9 @@ class AppTk(tk.Tk, App):
         def btn_props_press():
             ServerPropertiesEditor().gui(self.servers_list)
 
-        self.btn_props = tk.Button(
+        self.btn_props = ttk.Button(
             self.actions_frame,
             text=LANG["App"]["server_properties_button"],
-            bg="#00d2d2",
-            activebackground="LightGoldenrodYellow",
             command=btn_props_press,
         )
         self.btn_props.grid(column=0, row=0)
@@ -816,11 +802,9 @@ class AppTk(tk.Tk, App):
                 ]
             )
 
-        self.btn_start = tk.Button(
+        self.btn_start = ttk.Button(
             self.actions_frame,
             text=LANG["App"]["start_button"],
-            bg="#00d2d2",
-            activebackground="LightGoldenrodYellow",
             command=btn_start_press,
         )
         self.btn_start.grid(column=1, row=0)
@@ -833,19 +817,15 @@ class AppTk(tk.Tk, App):
                 ]
             )
 
-        self.btn_stop = tk.Button(
+        self.btn_stop = ttk.Button(
             self.actions_frame,
             text=LANG["App"]["stop_button"],
-            bg="#00d2d2",
-            activebackground="LightGoldenrodYellow",
             command=btn_stop_press,
         )
         self.btn_stop.grid(column=2, row=0)
-        self.btn_plugins = tk.Button(
+        self.btn_plugins = ttk.Button(
             self.actions_frame,
             text=LANG["App"]["plugins_button"],
-            bg="#00d2d2",
-            activebackground="LightGoldenrodYellow",
             command=self.open_plugins,
         )
         self.btn_plugins.grid(column=3, row=0)
@@ -859,35 +839,38 @@ class AppTk(tk.Tk, App):
                 True,
             )
 
-        self.btn_kill = tk.Button(
+        self.btn_kill = ttk.Button(
             self.actions_frame,
             text=LANG["App"]["kill_button"],
-            bg="#ca0000",
-            activebackground="LightGoldenrodYellow",
             command=btn_kill_press,
         )
         self.btn_kill.grid(column=4, row=0)
-        self.btn_del = tk.Button(
+
+        def btn_del_press():
+            self.delete_server(
+                [
+                    self.servers_list.item(selected_item)["values"][0]
+                    for selected_item in self.servers_list.selection()
+                ]
+            )
+
+        self.btn_del = ttk.Button(
             self.actions_frame,
             text=LANG["App"]["delete_button"],
-            bg="#00d2d2",
-            activebackground="LightGoldenrodYellow",
-            command=self.delete_server,
+            command=btn_del_press,
         )
         self.btn_del.grid(column=0, row=1)
 
         def btn_update_press():
             ServerCreateHelper().update_gui(self.servers_list)
 
-        self.btn_update = tk.Button(
+        self.btn_update = ttk.Button(
             self.actions_frame,
             text=LANG["App"]["update_button"],
-            bg="#00d2d2",
-            activebackground="LightGoldenrodYellow",
             command=btn_update_press,
         )
         self.btn_update.grid(column=1, row=1)
-        self.previous_servers_list = []
+        self.previous_servers_list = None
         self.refresh_servers_list_idle_task()
         self.bind("<<TreeviewSelect>>", self.servers_list_select)
         if cfg["version"] < VERSION:
@@ -902,7 +885,7 @@ class AppTk(tk.Tk, App):
 
     def refresh_servers_list_idle_task(self):
         self.refresh_servers_list()
-        self.after(5000, self.refresh_servers_list_idle_task)
+        self.after(1000, self.refresh_servers_list_idle_task)
 
     def chkbox_gui_change(self):
         for selected_item in self.servers_list.selection():
@@ -925,7 +908,7 @@ class AppTk(tk.Tk, App):
         self.btn_props.configure(state=tk.NORMAL)
         if all(
             cfg["servers"][self.servers_list.item(sel)["values"][0]]["type"]
-            in ["spigot", "paper", "purpur"]
+            in ("spigot", "paper", "purpur")
             for sel in self.servers_list.selection()
         ):
             self.btn_plugins.configure(state=tk.NORMAL)
@@ -934,9 +917,12 @@ class AppTk(tk.Tk, App):
         self.btn_update.configure(state=tk.NORMAL)
         self.chkbtn_gui.configure(state=tk.NORMAL)
         self.gui_var.set(
-            cfg["servers"][
-                self.servers_list.item(self.servers_list.selection()[0])["values"][0]
-            ]["gui"]
+            any(
+                cfg["servers"][self.servers_list.item(sel)["values"][0]]["gui"]
+                for sel in self.servers_list.selection()
+                if cfg["servers"][self.servers_list.item(sel)["values"][0]]["type"]
+                in ("spigot", "paper", "purpur")
+            )
         )
 
     def fixed_map(self, option):
@@ -965,11 +951,11 @@ class AppTk(tk.Tk, App):
                         ),
                         tags=(data["state"],),
                     )
-                if self.btn_create["bg"] == "Yellow":
-                    self.btn_create.configure(bg="#00d2d2")
+                if self.btn_create["style"] == "TButtonAccent":
+                    self.btn_create.configure(style="TButton")
             else:
-                if self.btn_create["bg"] == "#00d2d2":
-                    self.btn_create.configure(bg="Yellow")
+                if self.btn_create["style"] in ("TButton", ""):
+                    self.btn_create.configure(style="TButtonAccent")
             self.btn_del.configure(state=tk.DISABLED)
             self.btn_start.configure(state=tk.DISABLED)
             self.btn_stop.configure(state=tk.DISABLED)
