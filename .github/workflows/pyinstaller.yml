@@ -22,12 +22,12 @@ jobs:
         python-version: 3.11
     - name: Install dependencies
       run: |
-        pip install pip -U
+        python -m pip install pip -U
         pip install pyinstaller transliterate -U
         pip install -r requirements.txt -U
     - name: Build with pyinstaller
       run: |
-        pyinstaller --noconfirm --onefile --windowed --add-data lang.json;. --add-data serverrating.json;. --add-data icons;icons\ --collect-all transliterate main.py
+        pyinstaller --noconfirm --onefile --windowed --add-data "lang.json;." --add-data "serverrating.json;." --add-data "icons;icons\" --collect-all transliterate main.py
     - name: Upload bundled file
       uses: actions/upload-artifact@v3
       with:
@@ -45,7 +45,7 @@ jobs:
         python-version: 3.11
     - name: Install dependencies
       run: |
-        pip install pip -U
+        python -m pip install pip -U
         pip install pyinstaller transliterate flake8 -U
         pip install -r requirements.txt -U
     - name: Python Syntax Checker
