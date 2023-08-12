@@ -23,7 +23,7 @@ import argparse
 import sys
 import webbrowser
 
-VERSION = 6
+VERSION = 7
 NAME = "MSMS"
 CONFIG_NAME = "config.json"
 OS = platform.system()
