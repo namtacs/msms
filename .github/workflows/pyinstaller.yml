@@ -27,7 +27,7 @@ jobs:
         pip install -r requirements.txt -U
     - name: Build with pyinstaller
       run: |
-        pyinstaller --noconfirm --onefile --windowed --add-data lang.json;. --add-data serverrating.json;. --add-data icons;icons\ --collect-all transliterate
+        pyinstaller --noconfirm --onefile --windowed --add-data lang.json;. --add-data serverrating.json;. --add-data icons;icons\ --collect-all transliterate main.py
     - name: Upload bundled file
       uses: actions/upload-artifact@v3
       with:
@@ -53,7 +53,7 @@ jobs:
         flake8 . --count --select=E9,F63,F72,F82 --show-source --statistics
     - name: Build with pyinstaller
       run: |
-        pyinstaller --noconfirm --onefile --windowed --add-data lang.json:. --add-data serverrating.json:. --add-data icons:icons/ --collect-all transliterate
+        pyinstaller --noconfirm --onefile --windowed --add-data lang.json:. --add-data serverrating.json:. --add-data icons:icons/ --collect-all transliterate main.py
     - name: Upload bundled file
       uses: actions/upload-artifact@v3
       with:
