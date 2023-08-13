@@ -265,7 +265,7 @@ class ServerCreateHelper(tk.Tk):
                     "version": version,
                     "dir": dir,
                     "gui": True,
-                    "state": "Inactive",
+                    "state": "inactive",
                 }
             thread = threading.Thread(target=self.creating_thread, args=(name, cmd))
             thread.start()
@@ -320,7 +320,7 @@ class ServerCreateHelper(tk.Tk):
                     "version": version,
                     "dir": dir,
                     "gui": True,
-                    "state": "Inactive",
+                    "state": "inactive",
                 }
             thread = threading.Thread(target=self.creating_thread, args=(name, cmd))
             thread.start()
@@ -750,7 +750,7 @@ class AppTk(tk.Tk, App):
         self.servers_list.heading("type", text=LANG["App"]["server_type"])
         self.servers_list.column("type", width=72)
         self.servers_list.heading("state", text=LANG["App"]["server_state"])
-        self.servers_list.column("state", width=64)
+        self.servers_list.column("state", width=92)
         self.servers_list.heading("version", text=LANG["App"]["server_version"])
         self.servers_list.column("version", width=64)
         self.servers_list.grid(column=0, row=0)
@@ -901,6 +901,16 @@ class AppTk(tk.Tk, App):
         pammanage.PluginsManagement(servers)
 
     def servers_list_select(self, event):
+        if any(self.servers_list.item(sel)["tags"][0] == "inactive" for sel in self.servers_list.selection()):
+            self.btn_del.configure(state=tk.DISABLED)
+            self.btn_start.configure(state=tk.DISABLED)
+            self.btn_stop.configure(state=tk.DISABLED)
+            self.btn_kill.configure(state=tk.DISABLED)
+            self.btn_props.configure(state=tk.DISABLED)
+            self.btn_plugins.configure(state=tk.DISABLED)
+            self.btn_update.configure(state=tk.DISABLED)
+            self.chkbtn_gui.configure(state=tk.DISABLED)
+            return
         self.btn_del.configure(state=tk.NORMAL)
         self.btn_start.configure(state=tk.NORMAL)
         self.btn_stop.configure(state=tk.NORMAL)
@@ -915,7 +925,7 @@ class AppTk(tk.Tk, App):
         else:
             self.btn_plugins.configure(state=tk.DISABLED)
         self.btn_update.configure(state=tk.NORMAL)
-        self.chkbtn_gui.configure(state=tk.NORMAL)
+        self.chkbtn_gui.configure(state=tk.NORMAL if all(cfg["servers"][self.servers_list.item(sel)["values"][0]]["type"] in ("spigot", "paper", "purpur") for sel in self.servers_list.selection()) else tk.DISABLED)
         self.gui_var.set(
             any(
                 cfg["servers"][self.servers_list.item(sel)["values"][0]]["gui"]
