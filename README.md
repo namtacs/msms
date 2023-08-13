@@ -6,5 +6,7 @@ A tool to easily manage Minecraft servers
 + Start/Stop/Kill servers
 + Plugin install/update using [SpigotMC](https://spigotmc.org) ([Spiget](https://spiget.org))
 + Multi-language support
++ Built via [PyInstaller](https://pyinstaller.org) on Linux and Windows
++ Edit server.properties
 ## Download
 You can download the latest release here: [**LATEST RELEASE**](https://github.com/olegpokhilchenko/msms/releases/latest)
