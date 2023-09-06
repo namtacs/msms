@@ -10,3 +10,5 @@ A tool to easily manage Minecraft servers
 + Edit server.properties
 ## Download
 You can download the latest release here: [**LATEST RELEASE**](https://github.com/olegpokhilchenko/msms/releases/latest)
+
+It will create folders that it needs in the current directory.
